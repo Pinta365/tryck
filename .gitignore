@@ -1,0 +1,4 @@
+/dist/
+/tryck
+*.test
+*.out
