@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"syscall"
 	"time"
@@ -66,7 +67,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case "init":
 		return runInit(rest, stdout, stderr)
 	case "version", "--version", "-version":
-		fmt.Fprintf(stdout, "tryck %s\n", version)
+		fmt.Fprintf(stdout, "tryck %s\n", resolveVersion(version, debug.ReadBuildInfo))
 		return exitOK
 	case "help", "-h", "-help", "--help":
 		fmt.Fprint(stdout, usage)
@@ -318,6 +319,19 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintln(stdout, "  tryck dev")
 	return exitOK
+}
+
+// resolveVersion returns the version stamped by the release build, or
+// else the module version Go records for go install and go run
+// (v0.1.1), or else "dev" for local builds.
+func resolveVersion(stamped string, buildInfo func() (*debug.BuildInfo, bool)) string {
+	if stamped != "dev" {
+		return stamped
+	}
+	if info, ok := buildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+	return stamped
 }
 
 // roundDuration keeps build times readable: 412µs, 37ms, 1.2s.

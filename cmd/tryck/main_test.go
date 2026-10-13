@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"testing"
 )
@@ -125,5 +126,28 @@ func TestInfoHiddenWithoutVerbose(t *testing.T) {
 	code, _, stderr := runIn(t, dir, "build")
 	if code != 0 || strings.Contains(stderr, "info[") {
 		t.Errorf("code %d, stderr %q: info diagnostics should be hidden", code, stderr)
+	}
+}
+
+func TestResolveVersion(t *testing.T) {
+	info := func(v string) func() (*debug.BuildInfo, bool) {
+		return func() (*debug.BuildInfo, bool) { return &debug.BuildInfo{Main: debug.Module{Version: v}}, true }
+	}
+	none := func() (*debug.BuildInfo, bool) { return nil, false }
+	tests := []struct {
+		stamped string
+		info    func() (*debug.BuildInfo, bool)
+		want    string
+	}{
+		{"v0.1.1", info("v0.1.0"), "v0.1.1"}, // the release build's stamp wins
+		{"dev", info("v0.1.1"), "v0.1.1"},    // go install …@v0.1.1
+		{"dev", info("(devel)"), "dev"},      // go build in a checkout
+		{"dev", info(""), "dev"},
+		{"dev", none, "dev"},
+	}
+	for _, tt := range tests {
+		if got := resolveVersion(tt.stamped, tt.info); got != tt.want {
+			t.Errorf("resolveVersion(%q) = %q, want %q", tt.stamped, got, tt.want)
+		}
 	}
 }
