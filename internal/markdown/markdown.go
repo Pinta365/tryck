@@ -1,5 +1,5 @@
-// Package markdown configures goldmark: CommonMark plus GFM, heading IDs
-// and, in later milestones, tryck's ::: directives.
+// Package markdown configures goldmark: CommonMark plus GFM, unique
+// heading IDs and tryck's ::: directives.
 package markdown
 
 import (

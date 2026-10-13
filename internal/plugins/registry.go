@@ -46,9 +46,6 @@ func Load(cfg *config.Config, site plugin.SiteInfo, extra ...plugin.Plugin) (*Se
 	var dc diag.Collector
 	all := append(builtins(cfg), extra...)
 	known := map[string]bool{}
-	for name := range config.Defaults().Plugins {
-		known[name] = true // documented sections, even if not implemented yet
-	}
 	set := &Set{}
 	for _, p := range all {
 		name := p.Name()

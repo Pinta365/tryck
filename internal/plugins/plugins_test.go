@@ -223,7 +223,6 @@ func TestLoadErrors(t *testing.T) {
 			t.Error("plugin that failed Init is enabled")
 		}
 	}
-	_ = set
 }
 
 func TestDirectiveClaims(t *testing.T) {

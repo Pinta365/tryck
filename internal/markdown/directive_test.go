@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-
-	"github.com/Pinta365/tryck/internal/diag"
 )
 
 func renderMD(t *testing.T, src string) (string, []Issue) {
@@ -223,7 +221,6 @@ func TestDirectiveIssues(t *testing.T) {
 			}
 		})
 	}
-	_ = diag.Error
 }
 
 func TestUnclosedDoesNotHideStructure(t *testing.T) {
