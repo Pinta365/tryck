@@ -37,6 +37,9 @@ a { color: var(--link); }
 .sidebar a[aria-current="page"] { color: var(--link); font-weight: 600; }
 .nav-section { color: var(--muted); font-weight: 600; }
 .content { flex: 1 1 32rem; min-width: 0; max-width: 48rem; margin: 0 auto; padding: 1rem; }
+.layout > .content { margin: 0; } /* same position with or without a table of contents */
+.site-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.nav-toggle { padding: 0.25rem 0.75rem; border: 1px solid var(--line); border-radius: 6px; background: none; color: var(--fg); font: inherit; cursor: pointer; }
 .post-date { color: var(--muted); }
 .toc { flex: 0 0 14rem; align-self: flex-start; position: sticky; top: 0; padding: 1rem; font-size: 0.875rem; }
 .toc ul { list-style: none; margin: 0; padding-left: 0.75rem; }
@@ -55,6 +58,7 @@ pre { padding: 1rem; overflow-x: auto; background: var(--bg-alt); border-radius:
 :not(pre) > code { padding: 0.1em 0.3em; background: var(--bg-alt); border-radius: 4px; }
 table { border-collapse: collapse; display: block; overflow-x: auto; }
 th, td { padding: 0.4rem 0.75rem; border: 1px solid var(--line); }
+th { text-align: left; }
 img { max-width: 100%; }
 .admonition { --accent: var(--note); margin: 1rem 0; padding: 0.5rem 1rem; border-left: 4px solid var(--accent); background: var(--bg-alt); border-radius: 0 6px 6px 0; }
 .admonition-tip { --accent: var(--tip); }
@@ -73,7 +77,11 @@ details.details > summary { cursor: pointer; font-weight: 600; }
 .tab-label { margin: 1rem 0 0.25rem; font-weight: 600; }
 .tabs-js .tab-label { display: none; }
 @media (max-width: 72rem) { .toc { display: none; } }
-@media (max-width: 50rem) { .sidebar { flex-basis: 100%; border-bottom: 1px solid var(--line); } }
+@media (max-width: 50rem) {
+  .sidebar { flex-basis: 100%; border-bottom: 1px solid var(--line); }
+  .nav-collapsed .sidebar { display: none; }
+}
+@media (min-width: 50.01rem) { .nav-toggle { display: none; } }
 </style>
 </head>
 <body>
@@ -83,6 +91,17 @@ details.details > summary { cursor: pointer; font-weight: 600; }
 {{- end }}
 {{ block "main" . }}<main class="content">{{ .Content }}</main>{{ end }}
 <script>
+// On narrow screens, fold the sidebar behind the header's Menu button.
+(() => {
+  const toggle = document.querySelector(".nav-toggle");
+  if (!toggle || !document.querySelector(".sidebar")) return;
+  toggle.hidden = false;
+  document.body.classList.add("nav-collapsed");
+  toggle.addEventListener("click", () => {
+    const open = document.body.classList.toggle("nav-collapsed") === false;
+    toggle.setAttribute("aria-expanded", String(open));
+  });
+})();
 // Enhance :::tabs. Without JavaScript every panel shows with its label.
 (() => {
   const KEY = "tryck-tabs:";
