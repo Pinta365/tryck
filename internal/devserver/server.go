@@ -51,9 +51,9 @@ type Options struct {
 // snapshot is what the request path reads: a built site and the paths
 // needed to serve files that are not in memory.
 type snapshot struct {
-	site      *build.Site
-	staticDir string
-	assets    map[string]string // output path -> source file
+	site       *build.Site
+	staticDirs []string          // highest priority first: the site's, then the theme's
+	assets     map[string]string // output path -> source file
 }
 
 // Server is the dev server. Create it with New, call Start, and serve
@@ -123,7 +123,11 @@ func (s *Server) Done() <-chan struct{} { return s.done }
 
 func (s *Server) watchRoots() error {
 	c := s.cfg
-	for _, dir := range []string{c.Dir(c.Build.ContentDir), c.Dir(c.Build.LayoutsDir), c.Dir(c.Build.StaticDir)} {
+	dirs := []string{c.Dir(c.Build.ContentDir), c.Dir(c.Build.LayoutsDir), c.Dir(c.Build.StaticDir)}
+	if t := c.ThemeDir(); t != "" {
+		dirs = append(dirs, t)
+	}
+	for _, dir := range dirs {
 		if err := s.watcher.addTree(dir); err != nil {
 			return fmt.Errorf("watch %s: %w", dir, err)
 		}
@@ -188,14 +192,21 @@ func (s *Server) classify(name string) change {
 	}
 	c := s.cfg
 	under := func(dir string) bool {
-		d, err := filepath.Abs(c.Dir(dir))
+		d, err := filepath.Abs(dir)
 		return err == nil && (abs == d || strings.HasPrefix(abs, d+string(filepath.Separator)))
 	}
-	switch {
-	case under(c.Build.ContentDir), under(c.Build.LayoutsDir):
-		return changeContent
-	case under(c.Build.StaticDir):
-		return changeStatic
+	if t := c.ThemeDir(); t != "" && under(filepath.Join(t, config.ThemeFile)) {
+		return changeConfig
+	}
+	for _, d := range append(c.LayoutDirs(), c.Dir(c.Build.ContentDir)) {
+		if under(d) {
+			return changeContent
+		}
+	}
+	for _, d := range c.StaticDirs() {
+		if under(d) {
+			return changeStatic
+		}
 	}
 	return changeNone
 }
@@ -325,7 +336,11 @@ func (s *Server) report(site *build.Site, first bool) {
 			return
 		}
 	}
-	snap := &snapshot{site: site, staticDir: site.Config.Dir(site.Config.Build.StaticDir), assets: map[string]string{}}
+	snap := &snapshot{site: site, assets: map[string]string{}}
+	dirs := site.Config.StaticDirs()
+	for i := len(dirs) - 1; i >= 0; i-- {
+		snap.staticDirs = append(snap.staticDirs, dirs[i])
+	}
 	for _, a := range site.Assets {
 		snap.assets[a.OutPath] = a.Src
 	}
@@ -398,8 +413,10 @@ func (s *Server) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	if src, ok := snap.assets[key]; ok && serveFile(w, r, src) {
 		return
 	}
-	if serveFile(w, r, filepath.Join(snap.staticDir, filepath.FromSlash(key))) {
-		return
+	for _, dir := range snap.staticDirs {
+		if serveFile(w, r, filepath.Join(dir, filepath.FromSlash(key))) {
+			return
+		}
 	}
 	serveBytes(w, r, build.NotFoundPath, snap.site.Outputs[build.NotFoundPath], http.StatusNotFound)
 }

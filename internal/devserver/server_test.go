@@ -255,3 +255,34 @@ func TestServing(t *testing.T) {
 		t.Errorf("POST = %d", resp.StatusCode)
 	}
 }
+
+func TestThemeFolder(t *testing.T) {
+	e := newEnv(t, map[string]string{
+		"tryck.config.yaml":                "theme:\n  path: themes/t\n",
+		"themes/t/theme.yaml":              "footer: v1\n",
+		"themes/t/static/css/t.css":        "a{}",
+		"themes/t/layouts/partials/x.html": "",
+		"content/index.md":                 "# Home\n",
+	})
+	if _, body := e.get("/"); !strings.Contains(body, `<footer class="site-footer">v1</footer>`) {
+		t.Fatalf("theme footer missing:\n%s", body)
+	}
+	if code, body := e.get("/css/t.css"); code != 200 || body != "a{}" {
+		t.Errorf("theme static = %d %q", code, body)
+	}
+	if code, _ := e.get("/css/tryck.css"); code != 200 {
+		t.Errorf("built-in css = %d", code)
+	}
+
+	e.write("themes/t/theme.yaml", "footer: v2\n")
+	e.expectReload()
+	if _, body := e.get("/"); !strings.Contains(body, ">v2</footer>") {
+		t.Error("theme.yaml change not applied")
+	}
+
+	e.write("themes/t/layouts/partials/footer.html", "<footer>custom</footer>")
+	e.expectReload()
+	if _, body := e.get("/"); !strings.Contains(body, "<footer>custom</footer>") {
+		t.Error("theme layout change not applied")
+	}
+}

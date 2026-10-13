@@ -63,7 +63,7 @@ func execute(t *testing.T, tm *Templates, layout string) string {
 }
 
 func TestEmbeddedDefaults(t *testing.T) {
-	tm, ds := Load(filepath.Join(t.TempDir(), "missing"), "layouts", Funcs(FuncOptions{BaseURL: "https://u.github.io/repo/"}))
+	tm, ds := Load([]Dir{{filepath.Join(t.TempDir(), "missing"), "layouts"}}, Funcs(FuncOptions{BaseURL: "https://u.github.io/repo/"}))
 	if len(ds) != 0 {
 		t.Fatalf("diagnostics %v", ds)
 	}
@@ -89,7 +89,7 @@ func TestUserLayoutsOverride(t *testing.T) {
 		"landing.html":         `<!doctype html><h1>{{ .Page.Title }}</h1>`,
 		"partials/footer.html": `<footer>f</footer>`,
 	})
-	tm, ds := Load(dir, "layouts", Funcs(FuncOptions{BaseURL: "/"}))
+	tm, ds := Load([]Dir{{dir, "layouts"}}, Funcs(FuncOptions{BaseURL: "/"}))
 	if len(ds) != 0 {
 		t.Fatalf("diagnostics %v", ds)
 	}
@@ -108,7 +108,7 @@ func TestUserLayoutsOverride(t *testing.T) {
 }
 
 func TestMissingLayout(t *testing.T) {
-	tm, _ := Load(t.TempDir(), "layouts", Funcs(FuncOptions{BaseURL: "/"}))
+	tm, _ := Load([]Dir{{t.TempDir(), "layouts"}}, Funcs(FuncOptions{BaseURL: "/"}))
 	err := tm.Execute(&bytes.Buffer{}, "nope", &TemplateData{})
 	if !errors.Is(err, ErrMissingLayout) {
 		t.Errorf("err = %v, want ErrMissingLayout", err)
@@ -117,7 +117,7 @@ func TestMissingLayout(t *testing.T) {
 
 func TestParseErrorDiagnostic(t *testing.T) {
 	dir := writeLayouts(t, map[string]string{"doc.html": "line 1\n{{ define \"main\" }}\n{{ if }}x{{ end }}\n{{ end }}"})
-	tm, ds := Load(dir, "site/layouts", Funcs(FuncOptions{BaseURL: "/"}))
+	tm, ds := Load([]Dir{{dir, "site/layouts"}}, Funcs(FuncOptions{BaseURL: "/"}))
 	if len(ds) != 1 {
 		t.Fatalf("diagnostics = %v", ds)
 	}
@@ -143,7 +143,7 @@ func TestFuncs(t *testing.T) {
 		"partials/p.html":     `[{{ .v }}]`,
 		"partials/noarg.html": `[{{ . }}]`,
 	})
-	tm, ds := Load(dir, "layouts", funcs)
+	tm, ds := Load([]Dir{{dir, "layouts"}}, funcs)
 	if len(ds) != 0 {
 		t.Fatalf("diagnostics %v", ds)
 	}
@@ -166,7 +166,7 @@ func TestFuncErrors(t *testing.T) {
 		"non-string key":  `{{ dict 1 2 }}`,
 	} {
 		t.Run(name, func(t *testing.T) {
-			tm, ds := Load(writeLayouts(t, map[string]string{"x.html": body}), "layouts", Funcs(FuncOptions{BaseURL: "/"}))
+			tm, ds := Load([]Dir{{writeLayouts(t, map[string]string{"x.html": body}), "layouts"}}, Funcs(FuncOptions{BaseURL: "/"}))
 			if len(ds) != 0 {
 				t.Fatalf("diagnostics %v", ds)
 			}

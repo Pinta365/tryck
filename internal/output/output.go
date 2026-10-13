@@ -32,7 +32,11 @@ func Write(site *build.Site) (Stats, error) {
 	var st Stats
 
 	if cfg.Build.CleanOutput {
-		if err := checkCleanable(out, cfg.Root, cfg.Dir(cfg.Build.ContentDir), cfg.Dir(cfg.Build.StaticDir), cfg.Dir(cfg.Build.LayoutsDir)); err != nil {
+		sources := []string{cfg.Root, cfg.Dir(cfg.Build.ContentDir), cfg.Dir(cfg.Build.StaticDir), cfg.Dir(cfg.Build.LayoutsDir)}
+		if t := cfg.ThemeDir(); t != "" {
+			sources = append(sources, t)
+		}
+		if err := checkCleanable(out, sources...); err != nil {
 			return st, err
 		}
 		if err := clean(out); err != nil {
@@ -46,11 +50,12 @@ func Write(site *build.Site) (Stats, error) {
 	// Copies run first and in parallel; generated files are written
 	// after, so they win over a copied file with the same path.
 	var copies []copyJob
-	static := cfg.Dir(cfg.Build.StaticDir)
-	if err := content.WalkFiles(static, func(src, rel string) {
-		copies = append(copies, copyJob{src, filepath.Join(out, rel)})
-	}); err != nil {
-		return st, fmt.Errorf("copy static files: %w", err)
+	for _, static := range cfg.StaticDirs() { // theme first, so the site's files win
+		if err := content.WalkFiles(static, func(src, rel string) {
+			copies = append(copies, copyJob{src, filepath.Join(out, rel)})
+		}); err != nil {
+			return st, fmt.Errorf("copy static files: %w", err)
+		}
 	}
 	for _, a := range site.Assets {
 		copies = append(copies, copyJob{a.Src, filepath.Join(out, filepath.FromSlash(a.OutPath))})

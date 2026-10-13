@@ -6,6 +6,7 @@ A single-binary static site generator for technical documentation, written in Go
 - **Clear errors**: every problem is reported as `file:line:col: severity[code]: message`, and the build reports all of them at once.
 - **Correct docs output**: link and anchor checking, `.md` links rewritten to page URLs, clean URLs, sitemap, search index, redirects, and subpath deploys such as GitHub Pages project sites.
 - **Fast**: parallel parsing and rendering; about 80 ms for 1,000 pages on a laptop.
+- **Themes**: configure the built-in theme (accent, logo, light/dark, header links, footer, extra CSS) or package your own in a theme folder.
 - **Live reload**: `tryck dev` rebuilds in memory, reloads the browser and shows build errors as an overlay.
 - **No runtime dependencies**: one static binary, no Node or Python in CI.
 
@@ -69,9 +70,38 @@ const x = 1;
 ::::
 ````
 
+## Themes
+
+The built-in theme is configured in `tryck.config.yaml`; most sites need nothing else:
+
+```yaml
+theme:
+  accent: "#0b7a5a"          # links, active nav, tabs
+  logo: /img/logo.svg        # from static/
+  colorScheme: auto          # auto (follows the system, with a toggle), light or dark
+  nav:                       # header links
+    - title: GitHub
+      url: https://github.com/you/project
+  footer: "© 2026 You. Built with [tryck](https://github.com/Pinta365/tryck)."
+  css: [/css/custom.css]     # extra stylesheets, loaded last
+```
+
+Its styles live in `/css/tryck.css` and use CSS variables (`--fg`, `--bg`, `--font`, `--accent`, ...), so a stylesheet in `theme.css` can restyle the site without touching templates.
+
+**Theme folders** package layouts, static files and defaults for reuse. Point `theme.path` at one:
+
+```
+themes/acme/
+├── theme.yaml        # defaults for the theme section (accent, logo, footer, params, ...)
+├── layouts/          # replaces built-in layouts with the same name
+└── static/           # copied to the output root
+```
+
+Files are looked up in the site first, then the theme, then the built-in theme: `layouts/partials/footer.html` in your site beats the theme's, which beats tryck's. Settings in `tryck.config.yaml` win over `theme.yaml` key by key. Custom values for a theme's templates go in `theme.params` and are available as `.Theme.Params`.
+
 ## Layouts
 
-Default layouts are built in. Put a file with the same name in `layouts/` to override one, for example `layouts/partials/header.html`; see [internal/render/layouts](internal/render/layouts). Layouts are Go `html/template` files with the functions `relURL`, `absURL`, `dateFormat`, `markdownify`, `slugify`, `partial`, `default`, `dict` and `jsonify`.
+Layouts are Go `html/template` files; see the built-in set in [internal/render/layouts](internal/render/layouts). Templates get `.Site`, `.Page`, `.Content`, `.Nav`, `.TOC`, `.Prev`, `.Next` and `.Theme`, and the functions `relURL`, `absURL`, `dateFormat`, `markdownify`, `slugify`, `partial`, `default`, `dict` and `jsonify`.
 
 ## Plugins
 
@@ -81,11 +111,12 @@ Plugins are compiled in and hook into the build phases through the public API in
 | :- | :- | :- |
 | toc | `defaults.toc`, `defaults.tocDepth` | Table of contents per page |
 | readingTime | `plugins.readingTime` | `.Page.Data.readingTime` in minutes |
-| syntaxHighlighting | `plugins.syntaxHighlighting` | chroma highlighting with CSS classes, `/css/chroma.css` |
+| syntaxHighlighting | `plugins.syntaxHighlighting` | chroma highlighting with CSS classes; `theme` for light and `darkTheme` for dark mode, in `/css/chroma.css` |
 | linkCheck | `plugins.linkCheck` | Broken link and anchor diagnostics |
 | sitemap | `plugins.sitemap` | `/sitemap.xml` |
 | search | `plugins.search` | `/search-index.json` |
 | redirects | | A redirect page for each `aliases` entry |
+| mermaid | `plugins.mermaid` | ` ```mermaid ` blocks drawn as diagrams; the script loads from `url` (jsDelivr by default) only on pages that use it |
 
 ## Deploying
 

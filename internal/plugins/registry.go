@@ -26,6 +26,7 @@ func builtins(cfg *config.Config) []plugin.Plugin {
 		&Sitemap{},
 		&Search{},
 		&Redirects{},
+		&Mermaid{},
 	}
 }
 

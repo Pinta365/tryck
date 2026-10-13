@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guide · Themed</title>
+<link rel="stylesheet" href="/themed/css/tryck.css">
+<link rel="stylesheet" href="/themed/css/chroma.css">
+<link rel="stylesheet" href="/themed/css/acme.css">
+<style>
+:root { --accent: #0b7a5a; }
+:root[data-theme="dark"] { --accent: color-mix(in srgb, #0b7a5a 60%, white); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --accent: color-mix(in srgb, #0b7a5a 60%, white); } }
+</style>
+</head>
+<body>
+<header class="site-header">
+<a class="site-title" href="/themed/"><img class="site-logo" src="/themed/img/logo.svg" alt=""><span>Themed</span></a>
+<nav class="site-nav" aria-label="Links">
+<a href="https://github.com/Pinta365/tryck">GitHub</a>
+<a href="/themed/guide/">Guide</a>
+</nav>
+<button type="button" class="nav-toggle" aria-expanded="false" hidden>Menu</button>
+</header>
+
+
+<div class="layout">
+<nav class="sidebar" aria-label="Site"><ul>
+<li class="in-path"><a href="/themed/guide/" aria-current="page">Guide</a></li>
+</ul>
+</nav>
+
+<main class="content">
+<article class="doc">
+<h1 id="guide">Guide</h1>
+<pre class="chroma"><code><span class="line"><span class="ln">1</span><span class="cl"><span class="nx">x</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span></span></span></code></pre>
+</article>
+<nav class="pager" aria-label="Previous and next page">
+<a class="pager-prev" rel="prev" href="/themed/"><span>Previous</span>Welcome</a>
+</nav>
+</main>
+
+
+</div>
+
+<footer class="site-footer acme">Acme docs · Made with <strong>acme</strong>. <a href="/themed/">Home</a></footer>
+
+<script>
+
+(() => {
+  const toggle = document.querySelector(".nav-toggle");
+  if (!toggle || !document.querySelector(".sidebar")) return;
+  toggle.hidden = false;
+  document.body.classList.add("nav-collapsed");
+  toggle.addEventListener("click", () => {
+    const open = document.body.classList.toggle("nav-collapsed") === false;
+    toggle.setAttribute("aria-expanded", String(open));
+  });
+})();
+
+document.querySelector(".theme-toggle")?.addEventListener("click", () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("tryck-theme", root.dataset.theme); } catch {}
+});
+
+(() => {
+  const KEY = "tryck-tabs:";
+  const tabsOf = (el) => [...el.querySelectorAll(":scope > .tab-list > [role=tab]")];
+  function select(el, i, sync) {
+    const buttons = tabsOf(el);
+    const panels = el.querySelectorAll(":scope > [role=tabpanel]");
+    buttons.forEach((b, j) => {
+      b.setAttribute("aria-selected", String(i === j));
+      b.tabIndex = i === j ? 0 : -1;
+      if (panels[j]) panels[j].hidden = i !== j;
+    });
+    const group = el.dataset.group;
+    if (!sync || !group) return;
+    const label = buttons[i].textContent;
+    try { localStorage.setItem(KEY + group, label); } catch {}
+    document.querySelectorAll(".tabs[data-group]").forEach((other) => {
+      if (other !== el && other.dataset.group === group) selectLabel(other, label);
+    });
+  }
+  function selectLabel(el, label) {
+    const i = tabsOf(el).findIndex((b) => b.textContent === label);
+    if (i >= 0) select(el, i, false);
+  }
+  document.querySelectorAll(".tabs").forEach((el) => {
+    const list = el.querySelector(":scope > .tab-list");
+    if (!list) return;
+    list.hidden = false;
+    el.classList.add("tabs-js");
+    const buttons = tabsOf(el);
+    buttons.forEach((b, i) => {
+      b.addEventListener("click", () => select(el, i, true));
+      b.addEventListener("keydown", (e) => {
+        const n = buttons.length;
+        const j = { ArrowRight: (i + 1) % n, ArrowLeft: (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
+        if (j === undefined) return;
+        e.preventDefault();
+        select(el, j, true);
+        buttons[j].focus();
+      });
+    });
+    select(el, 0, false);
+    if (el.dataset.group) {
+      try { const saved = localStorage.getItem(KEY + el.dataset.group); if (saved) selectLabel(el, saved); } catch {}
+    }
+  });
+})();
+</script>
+</body>
+</html>

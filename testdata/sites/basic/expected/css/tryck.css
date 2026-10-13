@@ -1,0 +1,95 @@
+/*
+ * tryck default theme.
+ *
+ * Restyle by overriding variables in a stylesheet listed in theme.css, for
+ * example `:root { --font: Georgia, serif; }`. theme.accent sets --accent,
+ * which colors links in both schemes. Dark values apply when the color
+ * scheme is dark: data-theme="dark" on <html>, or the system preference
+ * when data-theme is not "light".
+ */
+:root {
+  color-scheme: light;
+  --fg: #1f2328; --muted: #59636e; --bg: #fff; --bg-alt: #f6f8fa; --line: #d1d9e0; --link: #0969da; --warn-bg: #fff8c5; --warn-line: #d4a72c;
+  --note: #0969da; --tip: #1a7f37; --info: #8250df; --warning: #9a6700; --danger: #cf222e;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --fg: #e6edf3; --muted: #9198a1; --bg: #0d1117; --bg-alt: #151b23; --line: #3d444d; --link: #4493f8; --warn-bg: #3b2e00; --warn-line: #9e6a03;
+  --note: #4493f8; --tip: #3fb950; --info: #ab7df8; --warning: #d29922; --danger: #f85149;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --fg: #e6edf3; --muted: #9198a1; --bg: #0d1117; --bg-alt: #151b23; --line: #3d444d; --link: #4493f8; --warn-bg: #3b2e00; --warn-line: #9e6a03;
+    --note: #4493f8; --tip: #3fb950; --info: #ab7df8; --warning: #d29922; --danger: #f85149;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--fg); background: var(--bg); font: 16px/1.6 var(--font); }
+a { color: var(--accent, var(--link)); }
+.site-header { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; border-bottom: 1px solid var(--line); }
+.site-title { display: flex; align-items: center; gap: 0.5rem; margin-right: auto; color: var(--fg); font-weight: 600; text-decoration: none; }
+.site-logo { height: 1.75rem; width: auto; }
+.site-nav { display: flex; flex-wrap: wrap; gap: 1rem; }
+.site-nav a { color: var(--muted); text-decoration: none; }
+.site-nav a:hover { color: var(--accent, var(--link)); }
+.theme-toggle { display: inline-flex; padding: 0.35rem; border: 1px solid var(--line); border-radius: 6px; background: none; color: var(--fg); font: inherit; line-height: 1; cursor: pointer; }
+.site-footer { max-width: 76rem; margin: 3rem auto 0; padding: 1.5rem 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.875rem; }
+.draft-banner { padding: 0.5rem 1rem; background: var(--warn-bg); border-bottom: 1px solid var(--warn-line); font-weight: 600; }
+.layout { display: flex; flex-wrap: wrap; max-width: 76rem; margin: 0 auto; }
+.sidebar { flex: 0 0 16rem; padding: 1rem; font-size: 0.95rem; }
+.sidebar ul { list-style: none; margin: 0; padding-left: 0.9rem; }
+.sidebar > ul { padding-left: 0; }
+.sidebar li { margin: 0.2rem 0; }
+.sidebar a { color: var(--fg); text-decoration: none; }
+.sidebar a:hover { color: var(--accent, var(--link)); }
+.sidebar a[aria-current="page"] { color: var(--accent, var(--link)); font-weight: 600; }
+.nav-section { color: var(--muted); font-weight: 600; }
+.content { flex: 1 1 32rem; min-width: 0; max-width: 48rem; margin: 0 auto; padding: 1rem; }
+.layout > .content { margin: 0; } /* same position with or without a TOC */
+.nav-toggle { padding: 0.25rem 0.75rem; border: 1px solid var(--line); border-radius: 6px; background: none; color: var(--fg); font: inherit; cursor: pointer; }
+.post-date { color: var(--muted); }
+.toc { flex: 0 0 14rem; align-self: flex-start; position: sticky; top: 0; padding: 1rem; font-size: 0.875rem; }
+.toc ul { list-style: none; margin: 0; padding-left: 0.75rem; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 0.2rem 0; }
+.toc a { color: var(--muted); text-decoration: none; }
+.toc a:hover { color: var(--accent, var(--link)); }
+.toc-title { margin: 0 0 0.5rem; font-weight: 600; }
+.reading-time { color: var(--muted); }
+.pager { display: flex; gap: 1rem; justify-content: space-between; margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.pager a { display: flex; flex-direction: column; text-decoration: none; }
+.pager span { color: var(--muted); font-size: 0.85rem; }
+.pager-next { margin-left: auto; text-align: right; }
+pre, code { font-family: var(--font-mono); font-size: 0.9em; }
+pre { padding: 1rem; overflow-x: auto; background: var(--bg-alt); border-radius: 6px; }
+:not(pre) > code { padding: 0.1em 0.3em; background: var(--bg-alt); border-radius: 4px; }
+table { border-collapse: collapse; display: block; overflow-x: auto; }
+th, td { padding: 0.4rem 0.75rem; border: 1px solid var(--line); }
+th { text-align: left; }
+img { max-width: 100%; }
+.admonition { --adm: var(--note); margin: 1rem 0; padding: 0.5rem 1rem; border-left: 4px solid var(--adm); background: var(--bg-alt); border-radius: 0 6px 6px 0; }
+.admonition-tip { --adm: var(--tip); }
+.admonition-info { --adm: var(--info); }
+.admonition-warning { --adm: var(--warning); }
+.admonition-danger { --adm: var(--danger); }
+.admonition-title { margin: 0.25rem 0; color: var(--adm); font-weight: 600; }
+.admonition > :last-child, .tab-panel > :last-child { margin-bottom: 0.5rem; }
+details.details { margin: 1rem 0; padding: 0.5rem 1rem; border: 1px solid var(--line); border-radius: 6px; }
+details.details > summary { cursor: pointer; font-weight: 600; }
+.tabs { margin: 1rem 0; }
+.tab-list { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 1px solid var(--line); }
+.tab-list[hidden] { display: none; }
+.tab-list [role="tab"] { padding: 0.4rem 0.9rem; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); font: inherit; cursor: pointer; }
+.tab-list [role="tab"][aria-selected="true"] { border-bottom-color: var(--accent, var(--link)); color: var(--fg); font-weight: 600; }
+.tab-label { margin: 1rem 0 0.25rem; font-weight: 600; }
+.tabs-js .tab-label { display: none; }
+@media (max-width: 72rem) { .toc { display: none; } }
+@media (max-width: 50rem) {
+  .sidebar { flex-basis: 100%; border-bottom: 1px solid var(--line); }
+  .nav-collapsed .sidebar { display: none; }
+}
+@media (min-width: 50.01rem) { .nav-toggle { display: none; } }
+@media (max-width: 50rem) { .site-nav { display: none; } }

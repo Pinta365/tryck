@@ -1,0 +1,15 @@
+site:
+  title: "Themed"
+  baseUrl: "https://example.com/themed/"
+theme:
+  path: themes/acme
+  accent: "#0b7a5a"          # overrides the theme's accent
+  nav:
+    - title: GitHub
+      url: https://github.com/Pinta365/tryck
+    - title: Guide
+      url: /guide/
+plugins:
+  syntaxHighlighting:
+    theme: github
+    darkTheme: nord

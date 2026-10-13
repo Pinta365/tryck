@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/fs"
 	"log/slog"
 	"maps"
 	"os"
@@ -71,6 +72,7 @@ type builder struct {
 	plugins *plugins.Set
 	site    plugin.SiteInfo
 	styles  []string
+	theme   render.ThemeData
 	view    *siteView // frozen after stage 3
 	pages   []*content.Page
 }
@@ -111,6 +113,7 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 		UnsafeHTML: cfg.Build.UnsafeHTML,
 		Extenders:  plugins.Each[plugin.MarkdownExtender](set),
 		Directives: directives,
+		SitePath:   func(p string) string { return render.RelURL(cfg.Site.BaseURL, p) },
 	})
 
 	funcs := render.Funcs(render.FuncOptions{
@@ -118,10 +121,14 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 		DateFormat:  cfg.Defaults.DateFormat,
 		Markdownify: b.md.RenderInline,
 	})
-	layouts := cfg.Dir(cfg.Build.LayoutsDir)
-	tmpl, ds := render.Load(layouts, b.rel(layouts), funcs)
+	var layoutDirs []render.Dir
+	for _, d := range cfg.LayoutDirs() {
+		layoutDirs = append(layoutDirs, render.Dir{Path: d, Label: b.rel(d)})
+	}
+	tmpl, ds := render.Load(layoutDirs, funcs)
 	b.dc.Add(ds...)
 	b.tmpl = tmpl
+	b.theme = b.themeData()
 
 	contentDir := cfg.Dir(cfg.Build.ContentDir)
 	src, err := content.Discover(contentDir)
@@ -177,12 +184,14 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	for _, p := range s.Pages {
 		s.Anchors[p.URL] = anchors(p.AST)
 	}
-	var static []string
-	staticDir := cfg.Dir(cfg.Build.StaticDir)
-	if err := content.WalkFiles(staticDir, func(_, rel string) { static = append(static, filepath.ToSlash(rel)) }); err != nil {
-		b.dc.Errorf(b.rel(staticDir), 0, 0, "content.read", "cannot read static files: %v", err)
+	static := map[string]bool{}
+	for _, dir := range cfg.StaticDirs() {
+		if err := content.WalkFiles(dir, func(_, rel string) { static[filepath.ToSlash(rel)] = true }); err != nil {
+			b.dc.Errorf(b.rel(dir), 0, 0, "content.read", "cannot read static files: %v", err)
+		}
 	}
-	b.view = newSiteView(s, b.site, static)
+	b.addBuiltinStatic(s, static)
+	b.view = newSiteView(s, b.site, slices.Sorted(maps.Keys(static)))
 	stage("index")
 
 	// [4] Render, in parallel.
@@ -348,6 +357,7 @@ func (b *builder) render(p *content.Page) ([]byte, bool) {
 		Prev:        b.view.prev[p.URL],
 		Next:        b.view.next[p.URL],
 		Stylesheets: b.styles,
+		Theme:       b.theme,
 		Dev:         b.opts.Dev,
 	}
 	var buf bytes.Buffer
@@ -372,6 +382,7 @@ func (b *builder) renderNotFound(s *Site) {
 		Page:        &plugin.PageInfo{Title: "Page not found", URL: "/" + NotFoundPath, TitleInBody: true},
 		Nav:         s.Nav,
 		Stylesheets: b.styles,
+		Theme:       b.theme,
 		Dev:         b.opts.Dev,
 	}
 	var buf bytes.Buffer
@@ -386,6 +397,48 @@ func (b *builder) renderNotFound(s *Site) {
 		}
 	}
 	s.Outputs[NotFoundPath] = buf.Bytes()
+}
+
+// themeData prepares the theme config for templates.
+func (b *builder) themeData() render.ThemeData {
+	t := b.cfg.Theme
+	d := render.ThemeData{
+		Accent:      template.CSS(t.Accent), // validated by config.Validate
+		AccentDark:  template.CSS(t.AccentDark),
+		Logo:        t.Logo,
+		ColorScheme: t.ColorScheme,
+		CSS:         t.CSS,
+		Params:      t.Params,
+	}
+	if d.Accent != "" && d.AccentDark == "" {
+		d.AccentDark = template.CSS("color-mix(in srgb, " + t.Accent + " 60%, white)") // readable on dark backgrounds
+	}
+	for _, l := range t.Nav {
+		d.Nav = append(d.Nav, render.NavLink{Title: l.Title, URL: l.URL})
+	}
+	if t.Footer != "" {
+		html, err := b.md.RenderInline(t.Footer)
+		if err != nil {
+			b.dc.Errorf(b.cfg.Path, 0, 0, "config.invalid", "theme.footer: %v", err)
+		}
+		d.Footer = template.HTML(html) // rendered by goldmark; raw HTML only with unsafeHTML
+	}
+	return d
+}
+
+// addBuiltinStatic adds the built-in theme's static files (css/tryck.css)
+// unless the theme or the site has a file with the same path.
+func (b *builder) addBuiltinStatic(s *Site, static map[string]bool) {
+	_ = fs.WalkDir(render.Static(), ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || static[p] {
+			return err
+		}
+		data, err := fs.ReadFile(render.Static(), p)
+		if err == nil {
+			s.Outputs[p] = data
+		}
+		return err
+	})
 }
 
 // pageInfo copies the template- and plugin-visible fields of p.

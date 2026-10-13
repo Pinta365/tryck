@@ -278,3 +278,67 @@ func TestDir(t *testing.T) {
 		t.Errorf("Dir(absolute) = %q", got)
 	}
 }
+
+func TestThemeDefaults(t *testing.T) {
+	root := t.TempDir()
+	write := func(rel, body string) {
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("themes/acme/theme.yaml", "accent: red\nlogo: /logo.svg\ncolorScheme: dark\nnav:\n  - title: A\n    url: /a/\n    target: x\nfooter: theme\n")
+	write("tryck.config.yaml", "theme:\n  path: themes/acme\n  accent: \"#00ff00\"\n  footer: site\n")
+
+	cfg, ds := Load(filepath.Join(root, "tryck.config.yaml"), true)
+	if len(ds) != 1 || ds[0].Code != "config.unknownKey" || ds[0].File != "themes/acme/theme.yaml" || ds[0].Line != 7 || !strings.Contains(ds[0].Message, `"nav[0].target"`) {
+		t.Errorf("diagnostics = %v, want one unknownKey for nav[0].target in theme.yaml:7", ds)
+	}
+	th := cfg.Theme
+	if th.Accent != "#00ff00" || th.Footer != "site" || th.Logo != "/logo.svg" || th.ColorScheme != "dark" || len(th.Nav) != 1 || th.Path != "themes/acme" {
+		t.Errorf("merged theme = %+v", th)
+	}
+	if got := cfg.LayoutDirs(); len(got) != 2 || got[0] != filepath.Join(root, "themes/acme/layouts") || got[1] != filepath.Join(root, "layouts") {
+		t.Errorf("LayoutDirs = %v", got)
+	}
+	if got := cfg.StaticDirs(); len(got) != 2 || got[0] != filepath.Join(root, "themes/acme/static") {
+		t.Errorf("StaticDirs = %v", got)
+	}
+	if len(cfg.Validate()) != 0 {
+		t.Errorf("validate: %v", cfg.Validate())
+	}
+
+	write("tryck.config.yaml", "theme:\n  path: themes/missing\n")
+	if _, ds := Load(filepath.Join(root, "tryck.config.yaml"), true); !diag.HasErrors(ds) || !strings.Contains(ds[0].Message, "not a directory") {
+		t.Errorf("missing theme dir: %v", ds)
+	}
+	if got := Defaults().LayoutDirs(); len(got) != 1 {
+		t.Errorf("no theme: LayoutDirs = %v", got)
+	}
+}
+
+func TestThemeValidate(t *testing.T) {
+	tests := []struct {
+		mutate  func(*ThemeConfig)
+		wantErr string
+	}{
+		{func(c *ThemeConfig) { c.Accent = "#0b7a5a" }, ""},
+		{func(c *ThemeConfig) { c.Accent = "rebeccapurple" }, ""},
+		{func(c *ThemeConfig) { c.Accent = "oklch(60% 0.15 160)" }, ""},
+		{func(c *ThemeConfig) { c.Accent = "red; } body { display: none" }, "theme.accent"},
+		{func(c *ThemeConfig) { c.Accent = "red</style>" }, "theme.accent"},
+		{func(c *ThemeConfig) { c.ColorScheme = "sepia" }, "theme.colorScheme"},
+		{func(c *ThemeConfig) { c.Nav = []NavLink{{Title: "x"}} }, "theme.nav[0]"},
+	}
+	for _, tt := range tests {
+		c := Defaults()
+		tt.mutate(&c.Theme)
+		ds := c.Validate()
+		if tt.wantErr == "" && len(ds) != 0 || tt.wantErr != "" && (len(ds) != 1 || !strings.Contains(ds[0].Message, tt.wantErr)) {
+			t.Errorf("%+v: got %v, want %q", c.Theme, ds, tt.wantErr)
+		}
+	}
+}

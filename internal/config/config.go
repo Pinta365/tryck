@@ -6,6 +6,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"maps"
 	"net/url"
@@ -30,6 +31,7 @@ type Config struct {
 	Site     SiteConfig     `yaml:"site"`
 	Build    BuildConfig    `yaml:"build"`
 	Defaults DefaultsConfig `yaml:"defaults"`
+	Theme    ThemeConfig    `yaml:"theme"`
 	// Plugins maps a plugin's config name to its raw section. Each plugin
 	// decodes its own section.
 	Plugins map[string]map[string]any `yaml:"plugins"`
@@ -66,6 +68,27 @@ type DefaultsConfig struct {
 	DateFormat string `yaml:"dateFormat"`
 }
 
+// ThemeConfig selects an optional theme folder and sets the options of
+// the built-in theme. A theme folder's theme.yaml supplies defaults for
+// every key except path; the site config wins.
+type ThemeConfig struct {
+	Path        string         `yaml:"path"`        // theme folder with layouts/, static/ and theme.yaml
+	Accent      string         `yaml:"accent"`      // CSS color for links, active nav and tabs
+	AccentDark  string         `yaml:"accentDark"`  // accent in dark mode; default: accent mixed with white
+	Logo        string         `yaml:"logo"`        // site path of an image shown in the header
+	ColorScheme string         `yaml:"colorScheme"` // auto (with a toggle), light or dark
+	Nav         []NavLink      `yaml:"nav"`         // header links
+	Footer      string         `yaml:"footer"`      // inline Markdown
+	CSS         []string       `yaml:"css"`         // extra stylesheets, linked after the theme's
+	Params      map[string]any `yaml:"params"`      // free-form values for custom themes
+}
+
+// NavLink is a header link.
+type NavLink struct {
+	Title string `yaml:"title"`
+	URL   string `yaml:"url"`
+}
+
 // Defaults returns the built-in configuration.
 func Defaults() *Config {
 	return &Config{
@@ -86,12 +109,14 @@ func Defaults() *Config {
 			TOCDepth:   [2]int{2, 3},
 			DateFormat: "2006-01-02",
 		},
+		Theme: ThemeConfig{ColorScheme: "auto"},
 		Plugins: map[string]map[string]any{
 			"readingTime":        {"enabled": true, "wordsPerMinute": 200},
-			"syntaxHighlighting": {"enabled": true, "theme": "nord", "lineNumbers": true},
+			"syntaxHighlighting": {"enabled": true, "theme": "github", "darkTheme": "github-dark", "lineNumbers": true},
 			"linkCheck":          {"enabled": true, "failOnBroken": true},
 			"sitemap":            {"enabled": true},
 			"search":             {"enabled": true},
+			"mermaid":            {"enabled": true},
 		},
 		Root: ".",
 	}
@@ -148,8 +173,97 @@ func Load(path string, required bool) (*Config, []diag.Diagnostic) {
 		}
 	}
 	cfg.Plugins = mergePlugins(defPlugins, cfg.Plugins)
+	if cfg.Theme.Path != "" && !dc.HasErrors() {
+		dc.Add(cfg.applyThemeDefaults(&doc)...)
+	}
 	cfg.normalize()
 	return cfg, dc.All()
+}
+
+// ThemeFile is a theme folder's settings file.
+const ThemeFile = "theme.yaml"
+
+// applyThemeDefaults reads the theme folder's theme.yaml and lays the
+// site's theme section over it again, so site values win key by key.
+func (c *Config) applyThemeDefaults(doc *yaml.Node) []diag.Diagnostic {
+	dir := c.ThemeDir()
+	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+		return []diag.Diagnostic{{Severity: diag.Error, File: c.Path, Code: "config.invalid",
+			Message: fmt.Sprintf("theme.path %q is not a directory", c.Theme.Path)}}
+	}
+	data, err := os.ReadFile(filepath.Join(dir, ThemeFile))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	file := filepath.ToSlash(filepath.Join(filepath.Clean(c.Theme.Path), ThemeFile))
+	if err != nil {
+		return []diag.Diagnostic{{Severity: diag.Error, File: file, Code: "config.read", Message: readErrMessage(err)}}
+	}
+	var tdoc yaml.Node
+	if err := yaml.Unmarshal(data, &tdoc); err != nil {
+		return []diag.Diagnostic{yamlDiag(file, err.Error())}
+	}
+	if tdoc.Kind == 0 {
+		return nil
+	}
+	var dc diag.Collector
+	checkKeys(&dc, file, &tdoc, reflect.TypeOf(ThemeConfig{}), "")
+	base := ThemeConfig{ColorScheme: "auto"}
+	if err := tdoc.Decode(&base); err != nil {
+		dc.Add(yamlDiag(file, err.Error()))
+		return dc.All()
+	}
+	base.Path = c.Theme.Path
+	if site := mapValue(doc, "theme"); site != nil {
+		_ = site.Decode(&base) // already decoded once without errors
+	}
+	c.Theme = base
+	return dc.All()
+}
+
+// mapValue returns the value node of key in a document's top mapping.
+func mapValue(doc *yaml.Node, key string) *yaml.Node {
+	n := doc
+	if n.Kind == yaml.DocumentNode && len(n.Content) > 0 {
+		n = n.Content[0]
+	}
+	if n.Kind != yaml.MappingNode {
+		return nil
+	}
+	for i := 0; i+1 < len(n.Content); i += 2 {
+		if n.Content[i].Value == key {
+			return n.Content[i+1]
+		}
+	}
+	return nil
+}
+
+// LayoutDirs lists the layout directories, lowest priority first: the
+// theme's layouts/, then the site's layoutsDir.
+func (c *Config) LayoutDirs() []string {
+	return c.layered("layouts", c.Build.LayoutsDir)
+}
+
+// StaticDirs lists the static directories, lowest priority first: the
+// theme's static/, then the site's staticDir.
+func (c *Config) StaticDirs() []string {
+	return c.layered("static", c.Build.StaticDir)
+}
+
+func (c *Config) layered(themeSub, siteDir string) []string {
+	var dirs []string
+	if t := c.ThemeDir(); t != "" {
+		dirs = append(dirs, filepath.Join(t, themeSub))
+	}
+	return append(dirs, c.Dir(siteDir))
+}
+
+// ThemeDir is the theme folder, or "" when no theme is set.
+func (c *Config) ThemeDir() string {
+	if c.Theme.Path == "" {
+		return ""
+	}
+	return c.Dir(c.Theme.Path)
 }
 
 func readErrMessage(err error) string {
@@ -162,6 +276,10 @@ func readErrMessage(err error) string {
 	}
 	return "cannot read config file: " + err.Error()
 }
+
+// cssColorRE accepts hex colors, names and functions like rgb() or
+// oklch(), and nothing that could end the declaration it is put in.
+var cssColorRE = regexp.MustCompile(`^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|[a-z-]+\([0-9a-zA-Z.,%/ +-]*\))$`)
 
 var yamlLineRE = regexp.MustCompile(`^(?:yaml: )?line (\d+): `)
 
@@ -192,6 +310,12 @@ func checkKeys(dc *diag.Collector, file string, n *yaml.Node, t reflect.Type, pr
 	if t.Kind() == reflect.Array && n.Kind == yaml.SequenceNode && len(n.Content) != t.Len() {
 		dc.Errorf(file, n.Line, n.Column, "config.yaml", "invalid YAML: %s must be a list of %d values, got %d",
 			strings.TrimSuffix(prefix, "."), t.Len(), len(n.Content))
+		return
+	}
+	if t.Kind() == reflect.Slice && n.Kind == yaml.SequenceNode {
+		for i, c := range n.Content {
+			checkKeys(dc, file, c, t.Elem(), fmt.Sprintf("%s[%d].", strings.TrimSuffix(prefix, "."), i))
+		}
 		return
 	}
 	if n.Kind != yaml.MappingNode || t.Kind() != reflect.Struct {
@@ -299,6 +423,21 @@ func (c *Config) Validate() []diag.Diagnostic {
 	}
 	if c.Defaults.Layout == "" {
 		bad("defaults.layout must not be empty")
+	}
+	switch c.Theme.ColorScheme {
+	case "auto", "light", "dark":
+	default:
+		bad("theme.colorScheme must be auto, light or dark, got %q", c.Theme.ColorScheme)
+	}
+	for name, v := range map[string]string{"theme.accent": c.Theme.Accent, "theme.accentDark": c.Theme.AccentDark} {
+		if v != "" && !cssColorRE.MatchString(v) {
+			bad("%s %q is not a CSS color", name, v)
+		}
+	}
+	for i, l := range c.Theme.Nav {
+		if l.Title == "" || l.URL == "" {
+			bad("theme.nav[%d] needs both title and url", i)
+		}
 	}
 	if lo, hi := c.Defaults.TOCDepth[0], c.Defaults.TOCDepth[1]; lo < 1 || hi > 6 || lo > hi {
 		bad("defaults.tocDepth must be [min, max] with 1 <= min <= max <= 6, got [%d, %d]", lo, hi)

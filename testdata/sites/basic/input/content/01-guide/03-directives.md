@@ -23,3 +23,8 @@ Nested directives work inside tabs.
 :::details[Click to expand]
 Hidden content.
 :::
+
+```mermaid
+flowchart LR
+    a["Markdown <b>"] --> b[tryck] --> c[HTML]
+```

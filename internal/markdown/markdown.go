@@ -27,12 +27,16 @@ type Options struct {
 	Extenders []plugin.MarkdownExtender
 	// Directives render ::: names tryck does not know, by name.
 	Directives map[string]plugin.DirectiveRenderer
+	// SitePath maps root-absolute links in RenderInline to final URLs,
+	// for example by adding the base path.
+	SitePath func(string) string
 }
 
 // Processor parses and renders Markdown. It is safe for concurrent use.
 type Processor struct {
-	md     goldmark.Markdown
-	custom map[string]plugin.DirectiveRenderer
+	md       goldmark.Markdown
+	custom   map[string]plugin.DirectiveRenderer
+	sitePath func(string) string
 }
 
 // New returns a Processor configured from opts.
@@ -51,7 +55,7 @@ func New(opts Options) *Processor {
 	for _, e := range opts.Extenders {
 		e.Extend(md)
 	}
-	return &Processor{md: md, custom: opts.Directives}
+	return &Processor{md: md, custom: opts.Directives, sitePath: opts.SitePath}
 }
 
 // Issue is a problem found while parsing, located by byte offset in the
@@ -142,6 +146,13 @@ func nodeOffset(n ast.Node) int {
 	return -1
 }
 
+func (p *Processor) rootLink(dest []byte) []byte {
+	if len(dest) > 0 && dest[0] == '/' && (len(dest) == 1 || dest[1] != '/') {
+		return []byte(p.sitePath(string(dest)))
+	}
+	return dest
+}
+
 // Render renders a document parsed from source to an HTML fragment.
 func (p *Processor) Render(doc ast.Node, source []byte) ([]byte, error) {
 	var buf bytes.Buffer
@@ -152,10 +163,26 @@ func (p *Processor) Render(doc ast.Node, source []byte) ([]byte, error) {
 }
 
 // RenderInline renders a short Markdown string, such as a front matter
-// description, and unwraps it if it is a single paragraph.
+// description, and unwraps it if it is a single paragraph. Root-absolute
+// link and image destinations ("/guide/") are passed through
+// p.SitePath, when set, so they get the site's base path.
 func (p *Processor) RenderInline(s string) (string, error) {
 	src := []byte(s)
 	doc, _ := p.Parse(src)
+	if p.sitePath != nil {
+		_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+			if !entering {
+				return ast.WalkContinue, nil
+			}
+			switch l := n.(type) {
+			case *ast.Link:
+				l.Destination = p.rootLink(l.Destination)
+			case *ast.Image:
+				l.Destination = p.rootLink(l.Destination)
+			}
+			return ast.WalkContinue, nil
+		})
+	}
 	out, err := p.Render(doc, src)
 	if err != nil {
 		return "", err

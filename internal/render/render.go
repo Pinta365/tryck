@@ -28,6 +28,20 @@ import (
 //go:embed layouts
 var embedded embed.FS
 
+//go:embed static
+var embeddedStatic embed.FS
+
+// Static returns the built-in theme's static files, such as
+// css/tryck.css. A file with the same path in the theme's or site's
+// static directory replaces it.
+func Static() fs.FS {
+	sub, err := fs.Sub(embeddedStatic, "static")
+	if err != nil {
+		panic(err)
+	}
+	return sub
+}
+
 // SiteInfo is the site-wide data available to templates.
 type SiteInfo = plugin.SiteInfo
 
@@ -43,7 +57,26 @@ type TemplateData struct {
 	TOC         []plugin.TOCEntry // from the toc plugin, nil if disabled
 	Prev, Next  *PageInfo         // nil at the ends
 	Stylesheets []string          // site paths of plugin CSS to link in <head>
+	Theme       ThemeData         // theme settings from the config
 	Dev         bool              // true in tryck dev
+}
+
+// ThemeData is the theme section of the config, ready for templates.
+type ThemeData struct {
+	Accent      template.CSS  // validated CSS color, or ""
+	AccentDark  template.CSS  // accent in dark mode
+	Logo        string        // site path
+	ColorScheme string        // auto, light or dark
+	Nav         []NavLink     // header links
+	Footer      template.HTML // rendered inline Markdown
+	CSS         []string      // extra stylesheets
+	Params      map[string]any
+}
+
+// NavLink is a header link.
+type NavLink struct {
+	Title string
+	URL   string
 }
 
 // ErrMissingLayout is returned by Execute for an unknown layout name.
@@ -60,10 +93,17 @@ type layoutFile struct {
 	content string
 }
 
+// Dir is a layouts directory and how it is named in diagnostics
+// (relative to the project root).
+type Dir struct {
+	Path  string
+	Label string
+}
+
 // Load parses the embedded default layouts, overridden file by file by
-// those in userDir (which may not exist). label is how userDir is named
-// in diagnostics, relative to the project root.
-func Load(userDir, label string, funcs template.FuncMap) (*Templates, []diag.Diagnostic) {
+// those in dirs (lowest priority first: the theme's, then the site's).
+// Directories that do not exist are skipped.
+func Load(dirs []Dir, funcs template.FuncMap) (*Templates, []diag.Diagnostic) {
 	files := map[string]layoutFile{}
 	var dc diag.Collector
 
@@ -80,31 +120,11 @@ func Load(userDir, label string, funcs template.FuncMap) (*Templates, []diag.Dia
 		return nil
 	})
 
-	err := filepath.WalkDir(userDir, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			if p == userDir && errors.Is(err, fs.ErrNotExist) {
-				return fs.SkipAll
-			}
-			return err
+	for _, d := range dirs {
+		if err := readLayouts(d, files); err != nil {
+			dc.Errorf(d.Label, 0, 0, "template.parse", "cannot read layouts: %v", err)
+			return &Templates{layouts: map[string]*template.Template{}}, dc.All()
 		}
-		if d.IsDir() || !strings.HasSuffix(p, ".html") {
-			return nil
-		}
-		rel, err := filepath.Rel(userDir, p)
-		if err != nil {
-			return err
-		}
-		b, err := os.ReadFile(p)
-		if err != nil {
-			return err
-		}
-		name := filepath.ToSlash(rel)
-		files[name] = layoutFile{name: name, label: path.Join(label, name), content: string(b)}
-		return nil
-	})
-	if err != nil {
-		dc.Errorf(label, 0, 0, "template.parse", "cannot read layouts: %v", err)
-		return &Templates{layouts: map[string]*template.Template{}}, dc.All()
 	}
 
 	names := slices.Sorted(func(yield func(string) bool) {
@@ -150,6 +170,33 @@ func Load(userDir, label string, funcs template.FuncMap) (*Templates, []diag.Dia
 		t.layouts[strings.TrimSuffix(n, ".html")] = set.Lookup(entry)
 	}
 	return t, dc.All()
+}
+
+// readLayouts adds the .html files under d to files, replacing those
+// with the same name.
+func readLayouts(d Dir, files map[string]layoutFile) error {
+	return filepath.WalkDir(d.Path, func(p string, e fs.DirEntry, err error) error {
+		if err != nil {
+			if p == d.Path && errors.Is(err, fs.ErrNotExist) {
+				return fs.SkipAll
+			}
+			return err
+		}
+		if e.IsDir() || !strings.HasSuffix(p, ".html") {
+			return nil
+		}
+		rel, err := filepath.Rel(d.Path, p)
+		if err != nil {
+			return err
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		name := filepath.ToSlash(rel)
+		files[name] = layoutFile{name: name, label: path.Join(d.Label, name), content: string(b)}
+		return nil
+	})
 }
 
 // definesMain reports whether a layout fills the "main" block of

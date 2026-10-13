@@ -17,7 +17,19 @@ defaults:
   toc: true
   tocDepth: [2, 3]
 
+theme:
+  colorScheme: auto          # auto (with a light/dark toggle), light or dark
+  # accent: "#0b7a5a"
+  # logo: /img/logo.svg
+  # nav:
+  #   - title: GitHub
+  #     url: https://github.com/you/project
+  footer: "Built with [tryck](https://github.com/Pinta365/tryck)."
+  # css: [/css/custom.css]   # override variables from /css/tryck.css here
+  # path: themes/my-theme    # a theme folder with layouts/, static/ and theme.yaml
+
 plugins:
   syntaxHighlighting:
-    theme: "nord"
+    theme: "github"
+    darkTheme: "github-dark"
     lineNumbers: false

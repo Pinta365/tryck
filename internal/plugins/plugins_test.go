@@ -116,8 +116,29 @@ func TestHighlight(t *testing.T) {
 	if err := h.OnBuildComplete(nil, out2); err != nil {
 		t.Fatal(err)
 	}
-	if css := string(out2.files[chromaCSSPath]); !strings.Contains(css, ".chroma") {
+	if css := string(out2.files[chromaCSSPath]); !strings.Contains(css, ".chroma") || strings.Contains(css, "data-theme") {
 		t.Errorf("chroma.css = %q", css)
+	}
+
+	dark := &Highlight{}
+	if err := dark.Init(map[string]any{"theme": "github", "darkTheme": "nord"}, plugin.SiteInfo{}); err != nil {
+		t.Fatal(err)
+	}
+	out3 := &memOutputs{}
+	if err := dark.OnBuildComplete(nil, out3); err != nil {
+		t.Fatal(err)
+	}
+	css := string(out3.files[chromaCSSPath])
+	for _, want := range []string{
+		`:root[data-theme="dark"] .chroma .k {`,
+		"@media (prefers-color-scheme: dark) {\n  :root:not([data-theme=\"light\"]) .bg {",
+	} {
+		if !strings.Contains(css, want) {
+			t.Errorf("dark chroma.css missing %q", want)
+		}
+	}
+	if err := (&Highlight{}).Init(map[string]any{"darkTheme": "nope"}, plugin.SiteInfo{}); err == nil {
+		t.Error("unknown dark theme accepted")
 	}
 	if err := (&Highlight{}).Init(map[string]any{"theme": "no-such-theme"}, plugin.SiteInfo{}); err == nil {
 		t.Error("unknown theme accepted")
@@ -168,7 +189,7 @@ func TestLoadOrderingAndConfig(t *testing.T) {
 	for _, p := range set.Plugins() {
 		names = append(names, p.Name())
 	}
-	if got := strings.Join(names, ","); got != "aa,zz,toc,redirects,search,sitemap,syntaxHighlighting,late,linkCheck" {
+	if got := strings.Join(names, ","); got != "aa,zz,toc,mermaid,redirects,search,sitemap,syntaxHighlighting,late,linkCheck" {
 		t.Errorf("order = %s", got)
 	}
 	var msgs []string
@@ -209,5 +230,53 @@ func TestDirectiveClaims(t *testing.T) {
 	}
 	if len(ds) != 2 || !strings.Contains(ds[0].Message, `"note" is built in`) || !strings.Contains(ds[1].Message, `already rendered by a`) {
 		t.Errorf("diagnostics = %v", ds)
+	}
+}
+
+func TestMermaid(t *testing.T) {
+	m := &Mermaid{}
+	if err := m.Init(nil, plugin.SiteInfo{}); err != nil {
+		t.Fatal(err)
+	}
+	h := &Highlight{}
+	if err := h.Init(nil, plugin.SiteInfo{}); err != nil {
+		t.Fatal(err)
+	}
+	md := markdown.New(markdown.Options{Extenders: []plugin.MarkdownExtender{h, m}})
+	src := []byte("```mermaid\ngraph LR\n  a[\"<b>\"] --> b\n```\n\n```go\nx := 1\n```\n")
+	doc, _ := md.Parse(src)
+	out, err := md.Render(doc, src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	html := string(out)
+	if !strings.Contains(html, "<pre class=\"mermaid\">graph LR\n  a[&quot;&lt;b&gt;&quot;] --&gt; b\n</pre>") || !strings.Contains(html, `<pre class="chroma">`) {
+		t.Errorf("render:\n%s", html)
+	}
+
+	p := &plugin.Page{AST: doc, Source: src, Data: map[string]any{}, HTML: []byte("<html><body>x</body></html>")}
+	if err := m.OnPageParsed(p); err != nil || p.Data["mermaid"] != true {
+		t.Fatalf("mermaid not detected: %v", err)
+	}
+	if err := m.OnPageRendered(p, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := string(p.HTML); !strings.Contains(got, `import mermaid from "`+DefaultMermaidURL+`";`) || !strings.HasSuffix(got, "</script>\n</body></html>") {
+		t.Errorf("script not injected before </body>:\n%s", got)
+	}
+
+	plain := &plugin.Page{AST: parsePage(t, "no diagrams").AST, Data: map[string]any{}, HTML: []byte("<body></body>")}
+	_ = m.OnPageParsed(plain)
+	_ = m.OnPageRendered(plain, nil)
+	if string(plain.HTML) != "<body></body>" {
+		t.Error("script added to a page without diagrams")
+	}
+
+	evil := &Mermaid{}
+	_ = evil.Init(map[string]any{"url": "x</script><script>alert(1)"}, plugin.SiteInfo{})
+	ep := &plugin.Page{Data: map[string]any{"mermaid": true}, HTML: []byte("</body>")}
+	_ = evil.OnPageRendered(ep, nil)
+	if strings.Contains(string(ep.HTML), "</script><script>alert") {
+		t.Error("url can break out of the script")
 	}
 }

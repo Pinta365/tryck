@@ -1,0 +1,7 @@
+accent: "#ff0000"
+logo: /img/logo.svg
+colorScheme: dark
+footer: "Made with **acme**. [Home](/)"
+css: [/css/acme.css]
+params:
+  tagline: Acme docs
