@@ -1,0 +1,5 @@
+site:
+  title: "Basic Docs"
+  description: "Golden test fixture."
+  baseUrl: "https://example.com/basic/"
+  language: "en"

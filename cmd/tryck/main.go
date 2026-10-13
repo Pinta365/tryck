@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -10,9 +11,12 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"time"
 
+	"github.com/Pinta365/tryck/internal/build"
 	"github.com/Pinta365/tryck/internal/config"
 	"github.com/Pinta365/tryck/internal/diag"
+	"github.com/Pinta365/tryck/internal/output"
 )
 
 // version is set at release time with -ldflags "-X main.version=v0.1.0".
@@ -130,7 +134,7 @@ func newLogger(stderr io.Writer, verbose bool) *slog.Logger {
 func runBuild(args []string, stdout, stderr io.Writer) int {
 	fs := newFlagSet("build", "[flags]", stderr)
 	configPath := fs.String("config", config.DefaultPath, "config file")
-	output := fs.String("output", "", "output directory (overrides build.outputDir)")
+	outputDir := fs.String("output", "", "output directory (overrides build.outputDir)")
 	drafts := fs.Bool("drafts", false, "include draft pages")
 	baseURL := fs.String("base-url", "", "site base URL (overrides site.baseUrl)")
 	workers := fs.Int("workers", 0, "parallel workers, 0 = number of CPUs (overrides build.workers)")
@@ -142,7 +146,7 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 	set := setFlags(fs)
 	var ov config.Overrides
 	if set["output"] {
-		ov.OutputDir = output
+		ov.OutputDir = outputDir
 	}
 	if set["drafts"] {
 		ov.Drafts = drafts
@@ -155,13 +159,46 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 	}
 
 	log := newLogger(stderr, *verbose)
-	cfg, _ := loadConfig(*configPath, set["config"], ov, stderr)
+	cfg, cfgDiags := loadConfig(*configPath, set["config"], ov, stderr)
 	if cfg == nil {
 		return exitConfig
 	}
 	log.Debug("config loaded", "path", cfg.Path, "root", cfg.Root, "baseUrl", cfg.Site.BaseURL, "workers", cfg.WorkerCount())
 
-	fmt.Fprintln(stderr, "tryck build: not implemented yet")
+	start := time.Now()
+	site, err := build.Build(context.Background(), cfg, build.Options{})
+	if err != nil {
+		fmt.Fprintf(stderr, "tryck build: %v\n", err)
+		return exitBuild
+	}
+	for _, d := range site.Diags {
+		fmt.Fprintln(stderr, diag.Format(d))
+	}
+	log.Debug("site built", "pages", len(site.Pages), "duration", time.Since(start))
+
+	var st output.Stats
+	if !site.HasErrors() {
+		st, err = output.Write(site)
+		if err != nil {
+			fmt.Fprintf(stderr, "tryck build: %v\n", err)
+			return exitBuild
+		}
+	}
+
+	warnings, errs := 0, 0
+	for _, d := range append(cfgDiags, site.Diags...) {
+		switch d.Severity {
+		case diag.Warning:
+			warnings++
+		case diag.Error:
+			errs++
+		}
+	}
+	fmt.Fprintf(stdout, "Built %d pages, copied %d files, %d warnings, %d errors in %s\n",
+		len(site.Pages), st.Copied, warnings, errs, roundDuration(time.Since(start)))
+	if errs > 0 {
+		return exitBuild
+	}
 	return exitOK
 }
 
@@ -201,6 +238,18 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintln(stderr, "tryck init: not implemented yet")
 	return exitOK
+}
+
+// roundDuration keeps build times readable: 412µs, 37ms, 1.2s.
+func roundDuration(d time.Duration) time.Duration {
+	switch {
+	case d < time.Millisecond:
+		return d.Round(time.Microsecond)
+	case d < time.Second:
+		return d.Round(time.Millisecond)
+	default:
+		return d.Round(100 * time.Millisecond)
+	}
 }
 
 func ptr[T any](v T) *T { return &v }
