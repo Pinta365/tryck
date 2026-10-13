@@ -15,18 +15,14 @@ import (
 	"unicode/utf8"
 
 	"github.com/Pinta365/tryck/internal/content"
+	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
 // Node is one entry in the navigation tree.
-type Node struct {
-	Title    string
-	URL      string // "" for a folder without an index page
-	Draft    bool
-	Section  bool // a folder, possibly with an index page
-	Children []*Node
-	Active   bool // the page being rendered (per-page views only)
-	InPath   bool // the active page or one of its ancestors
+type Node = plugin.NavNode
 
+// sortKey holds the ordering inputs that are not part of Node.
+type sortKey struct {
 	weight int // 0 = unset
 	prefix int // numeric filename prefix, or math.MaxInt for none
 }
@@ -34,8 +30,9 @@ type Node struct {
 // Build creates the tree for pages. siteTitle labels the root when there
 // is no root index page.
 func Build(pages []*content.Page, siteTitle string) *Node {
-	root := &Node{Title: siteTitle, Section: true, prefix: math.MaxInt}
+	root := &Node{Title: siteTitle, Section: true}
 	dirs := map[string]*Node{".": root}
+	keys := map[*Node]sortKey{root: {prefix: math.MaxInt}}
 
 	var dirNode func(dir string) *Node
 	dirNode = func(dir string) *Node {
@@ -44,7 +41,8 @@ func Build(pages []*content.Page, siteTitle string) *Node {
 		}
 		parent := dirNode(path.Dir(dir))
 		seg := path.Base(dir)
-		n := &Node{Title: TitleCase(content.StripNumericPrefix(seg)), Section: true, prefix: prefixOf(seg)}
+		n := &Node{Title: TitleCase(content.StripNumericPrefix(seg)), Section: true}
+		keys[n] = sortKey{prefix: prefixOf(seg)}
 		parent.Children = append(parent.Children, n)
 		dirs[dir] = n
 		return n
@@ -55,20 +53,17 @@ func Build(pages []*content.Page, siteTitle string) *Node {
 		title := cmp.Or(p.Front.NavTitle, p.Title)
 		if content.IsSectionIndex(p.SourcePath) {
 			n := dirNode(dir)
-			n.Title, n.URL, n.Draft, n.weight = title, p.URL, p.Front.Draft, p.Front.Weight
+			n.Title, n.URL, n.Draft = title, p.URL, p.Front.Draft
+			keys[n] = sortKey{weight: p.Front.Weight, prefix: keys[n].prefix}
 			continue
 		}
 		parent := dirNode(dir)
 		base := strings.TrimSuffix(path.Base(p.SourcePath), path.Ext(p.SourcePath))
-		parent.Children = append(parent.Children, &Node{
-			Title:  title,
-			URL:    p.URL,
-			Draft:  p.Front.Draft,
-			weight: p.Front.Weight,
-			prefix: prefixOf(base),
-		})
+		n := &Node{Title: title, URL: p.URL, Draft: p.Front.Draft}
+		keys[n] = sortKey{weight: p.Front.Weight, prefix: prefixOf(base)}
+		parent.Children = append(parent.Children, n)
 	}
-	sortTree(root)
+	sortTree(root, keys)
 	return root
 }
 
@@ -81,17 +76,18 @@ func prefixOf(seg string) int {
 
 // sortTree orders siblings by weight (unset last), then numeric prefix
 // (none last), then title case-insensitively, then URL for stability.
-func sortTree(n *Node) {
+func sortTree(n *Node, keys map[*Node]sortKey) {
 	slices.SortStableFunc(n.Children, func(a, b *Node) int {
+		ka, kb := keys[a], keys[b]
 		return cmp.Or(
-			cmp.Compare(weightKey(a.weight), weightKey(b.weight)),
-			cmp.Compare(a.prefix, b.prefix),
+			cmp.Compare(weightKey(ka.weight), weightKey(kb.weight)),
+			cmp.Compare(ka.prefix, kb.prefix),
 			cmp.Compare(strings.ToLower(a.Title), strings.ToLower(b.Title)),
 			cmp.Compare(a.URL, b.URL),
 		)
 	})
 	for _, c := range n.Children {
-		sortTree(c)
+		sortTree(c, keys)
 	}
 }
 

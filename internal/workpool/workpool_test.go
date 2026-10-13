@@ -57,16 +57,25 @@ func TestRunConcurrencyLimit(t *testing.T) {
 
 func TestRunCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	var calls atomic.Int32
+	var calls, late atomic.Int32
+	var cancelled atomic.Bool
 	err := Run(ctx, 1000, 2, func(i int) {
+		if cancelled.Load() {
+			late.Add(1)
+		}
 		if calls.Add(1) == 5 {
 			cancel()
+			cancelled.Store(true)
 		}
 	})
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("err = %v", err)
 	}
-	if calls.Load() > 10 {
-		t.Errorf("%d items ran after cancel", calls.Load())
+	// Each worker may already be past its ctx check when cancel returns.
+	if late.Load() > 2 {
+		t.Errorf("%d items started after cancel returned", late.Load())
+	}
+	if calls.Load() == 1000 {
+		t.Error("cancel did not stop the pool")
 	}
 }

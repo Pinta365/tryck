@@ -8,9 +8,11 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,13 +20,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yuin/goldmark/ast"
+
 	"github.com/Pinta365/tryck/internal/config"
 	"github.com/Pinta365/tryck/internal/content"
 	"github.com/Pinta365/tryck/internal/diag"
 	"github.com/Pinta365/tryck/internal/markdown"
 	"github.com/Pinta365/tryck/internal/nav"
+	"github.com/Pinta365/tryck/internal/plugins"
 	"github.com/Pinta365/tryck/internal/render"
 	"github.com/Pinta365/tryck/internal/workpool"
+	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
 // NotFoundPath is the output path of the 404 page, served by both
@@ -36,10 +42,11 @@ type Site struct {
 	Config  *config.Config
 	Pages   []*content.Page // sorted by URL
 	ByURL   map[string]*content.Page
-	Nav     *nav.Node         // read-only after stage 3
-	Assets  []content.Asset   // files from contentDir copied next to pages
-	Outputs map[string][]byte // output path -> bytes (pages + generated files)
-	Diags   []diag.Diagnostic // sorted
+	Nav     *nav.Node                      // read-only after stage 3
+	Anchors map[string]map[string]struct{} // URL -> set of element IDs
+	Assets  []content.Asset                // files from contentDir copied next to pages
+	Outputs map[string][]byte              // output path -> bytes (pages + generated files)
+	Diags   []diag.Diagnostic              // sorted
 	BuiltAt time.Time
 }
 
@@ -48,20 +55,22 @@ func (s *Site) HasErrors() bool { return diag.HasErrors(s.Diags) }
 
 // Options adjust a build.
 type Options struct {
-	Dev    bool         // set TemplateData.Dev
-	Logger *slog.Logger // debug logs with per-stage timings; nil = silent
+	Dev     bool            // building for tryck dev
+	Logger  *slog.Logger    // debug logs with per-stage timings; nil = silent
+	Plugins []plugin.Plugin // compiled-in plugins in addition to the built-ins
 }
 
 type builder struct {
-	cfg   *config.Config
-	opts  Options
-	dc    diag.Collector
-	md    *markdown.Processor
-	tmpl  *render.Templates
-	site  render.SiteInfo
-	pages []*content.Page
-	// prev and next page of each URL in nav order
-	prev, next map[string]*content.Page
+	cfg     *config.Config
+	opts    Options
+	dc      diag.Collector
+	md      *markdown.Processor
+	tmpl    *render.Templates
+	plugins *plugins.Set
+	site    plugin.SiteInfo
+	styles  []string
+	view    *siteView // frozen after stage 3
+	pages   []*content.Page
 }
 
 // Build runs the pipeline. It always returns a Site; check HasErrors.
@@ -70,12 +79,12 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	b := &builder{
 		cfg:  cfg,
 		opts: opts,
-		md:   markdown.New(markdown.Options{UnsafeHTML: cfg.Build.UnsafeHTML}),
-		site: render.SiteInfo{
+		site: plugin.SiteInfo{
 			Title:       cfg.Site.Title,
 			Description: cfg.Site.Description,
 			BaseURL:     cfg.Site.BaseURL,
 			Language:    cfg.Site.Language,
+			Dev:         opts.Dev,
 		},
 	}
 	s := &Site{Config: cfg, ByURL: map[string]*content.Page{}, Outputs: map[string][]byte{}}
@@ -90,12 +99,25 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	}
 
 	// [1] Load
+	set, ds := plugins.Load(cfg, b.site, opts.Plugins...)
+	b.dc.Add(ds...)
+	b.plugins = set
+	b.styles = set.Stylesheets()
+	directives, ds := set.Directives()
+	b.dc.Add(ds...)
+	b.md = markdown.New(markdown.Options{
+		UnsafeHTML: cfg.Build.UnsafeHTML,
+		Extenders:  plugins.Each[plugin.MarkdownExtender](set),
+		Directives: directives,
+	})
+
 	funcs := render.Funcs(render.FuncOptions{
 		BaseURL:     cfg.Site.BaseURL,
 		DateFormat:  cfg.Defaults.DateFormat,
 		Markdownify: b.md.RenderInline,
 	})
-	tmpl, ds := render.Load(cfg.Dir(cfg.Build.LayoutsDir), b.rel(cfg.Dir(cfg.Build.LayoutsDir)), funcs)
+	layouts := cfg.Dir(cfg.Build.LayoutsDir)
+	tmpl, ds := render.Load(layouts, b.rel(layouts), funcs)
 	b.dc.Add(ds...)
 	b.tmpl = tmpl
 
@@ -105,7 +127,7 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 		b.dc.Errorf(b.rel(contentDir), 0, 0, "content.read", "cannot read content: %v", err)
 	}
 	s.Assets = src.Assets
-	stage("load", "pages", len(src.Pages), "assets", len(src.Assets))
+	stage("load", "pages", len(src.Pages), "assets", len(src.Assets), "plugins", len(set.Plugins()))
 
 	// [2] Parse, in parallel. A page only touches its own Page.
 	workers := cfg.WorkerCount()
@@ -123,8 +145,8 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	}
 	stage("parse", "workers", workers)
 
-	// [3] Index, sequential. Pages, ByURL, Nav, prev and next are
-	// read-only from here on.
+	// [3] Index, sequential. Pages, ByURL, Nav, Anchors and the plugin
+	// view are read-only from here on.
 	slices.SortFunc(b.pages, func(x, y *content.Page) int {
 		return cmp.Or(strings.Compare(x.URL, y.URL), strings.Compare(x.SourcePath, y.SourcePath))
 	})
@@ -137,18 +159,17 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 		s.Pages = append(s.Pages, p)
 	}
 	s.Nav = nav.Build(s.Pages, cfg.Site.Title)
-	b.prev, b.next = map[string]*content.Page{}, map[string]*content.Page{}
-	order := nav.Walk(s.Nav)
-	for i := 1; i < len(order); i++ {
-		b.prev[order[i]] = s.ByURL[order[i-1]]
-		b.next[order[i-1]] = s.ByURL[order[i]]
+	s.Anchors = make(map[string]map[string]struct{}, len(s.Pages))
+	for _, p := range s.Pages {
+		s.Anchors[p.URL] = anchors(p.AST)
 	}
+	b.view = newSiteView(s, b.site)
 	stage("index")
 
 	// [4] Render, in parallel.
 	rendered := make([][]byte, len(s.Pages))
 	err = workpool.Run(ctx, len(s.Pages), workers, func(i int) {
-		if out, ok := b.render(s, s.Pages[i]); ok {
+		if out, ok := b.render(s.Pages[i]); ok {
 			rendered[i] = out
 		}
 	})
@@ -163,13 +184,24 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	b.renderNotFound(s)
 	stage("render", "workers", workers)
 
-	// [5] Finalize: assets must not overwrite generated pages.
+	// [5] Finalize, sequential.
 	for _, a := range s.Assets {
 		if _, ok := s.Outputs[a.OutPath]; ok {
 			b.dc.Errorf(b.rel(a.Src), 0, 0, "url.conflict", "%s would overwrite generated %s", b.rel(a.Src), a.OutPath)
 		}
 	}
-
+	out := &outputs{files: s.Outputs, assets: map[string]bool{}}
+	for _, a := range s.Assets {
+		out.assets[a.OutPath] = true
+	}
+	for _, f := range plugins.Each[plugin.Finalizer](set) {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		if err := f.OnBuildComplete(b.view, out); err != nil {
+			b.dc.Errorf("", 0, 0, "plugin.error", "plugin %s: %v", f.(plugin.Plugin).Name(), err)
+		}
+	}
 	stage("finalize")
 
 	s.Diags = b.dc.All()
@@ -183,6 +215,16 @@ func (b *builder) rel(p string) string {
 		return filepath.ToSlash(r)
 	}
 	return filepath.ToSlash(p)
+}
+
+// reporter collects plugin diagnostics for one page.
+type reporter struct {
+	dc   *diag.Collector
+	file string
+}
+
+func (r reporter) Report(d plugin.Diagnostic) {
+	r.dc.Add(diag.Diagnostic{Severity: diag.Severity(d.Severity), File: r.file, Line: d.Line, Col: d.Col, Code: d.Code, Message: d.Message})
 }
 
 // parse reads one Markdown file. It returns nil for drafts that are
@@ -205,15 +247,16 @@ func (b *builder) parse(contentDir, rel string) *content.Page {
 		return nil
 	}
 
-	p := &content.Page{
-		SourcePath: rel,
-		File:       file,
-		Front:      front,
-		Source:     body,
-		BodyLine:   bodyLine,
-	}
+	p := &content.Page{File: file}
+	p.SourcePath = rel
+	p.Front = front
+	p.Source = body
+	p.BodyLine = bodyLine
+	p.Data = map[string]any{}
+	p.Diags = reporter{&b.dc, file}
 	p.URL = content.URLFor(rel, front.Slug)
 	p.OutPath = content.OutputPath(p.URL)
+
 	var issues []markdown.Issue
 	p.AST, issues = b.md.Parse(body)
 	for _, is := range issues {
@@ -226,16 +269,38 @@ func (b *builder) parse(contentDir, rel string) *content.Page {
 	h1 := content.FirstH1(p.AST, body)
 	p.HasH1 = h1 != ""
 	p.Title = cmp.Or(front.Title, h1, content.TitleFromPath(rel), b.cfg.Site.Title, "Home")
+
+	for _, pp := range plugins.Each[plugin.PageParser](b.plugins) {
+		if err := pp.OnPageParsed(&p.Page); err != nil {
+			b.dc.Errorf(file, 0, 0, "plugin.error", "plugin %s: %v", pp.(plugin.Plugin).Name(), err)
+		}
+	}
 	return p
 }
 
-func (b *builder) render(s *Site, p *content.Page) ([]byte, bool) {
-	html, err := b.md.Render(p.AST, p.Source)
+// anchors collects the element IDs of a document: heading IDs and
+// directive {#id}s.
+func anchors(doc ast.Node) map[string]struct{} {
+	ids := map[string]struct{}{}
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if entering {
+			if v, ok := n.AttributeString("id"); ok {
+				if b, ok := v.([]byte); ok {
+					ids[string(b)] = struct{}{}
+				}
+			}
+		}
+		return ast.WalkContinue, nil
+	})
+	return ids
+}
+
+func (b *builder) render(p *content.Page) ([]byte, bool) {
+	body, err := b.md.Render(p.AST, p.Source)
 	if err != nil {
 		b.dc.Errorf(p.File, 0, 0, "markdown.render", "%v", err)
 		return nil, false
 	}
-	p.HTML = html
 
 	layout := cmp.Or(p.Front.Layout, b.cfg.Defaults.Layout)
 	if !b.tmpl.Has(layout) {
@@ -243,30 +308,41 @@ func (b *builder) render(s *Site, p *content.Page) ([]byte, bool) {
 			path.Join(b.rel(b.cfg.Dir(b.cfg.Build.LayoutsDir)), layout+".html"))
 		return nil, false
 	}
+	toc, _ := p.Data["toc"].([]plugin.TOCEntry)
 	data := &render.TemplateData{
-		Site:    b.site,
-		Page:    pageInfo(p),
-		Content: template.HTML(html), // trusted: rendered by goldmark (spec §9.4)
-		Nav:     nav.ForPage(s.Nav, p.URL),
-		Prev:    pageInfo(b.prev[p.URL]),
-		Next:    pageInfo(b.next[p.URL]),
-		Dev:     b.opts.Dev,
+		Site:        b.site,
+		Page:        b.view.info[p.URL],
+		Content:     template.HTML(body), // trusted: rendered by goldmark (spec §9.4)
+		Nav:         nav.ForPage(b.view.nav, p.URL),
+		TOC:         toc,
+		Prev:        b.view.prev[p.URL],
+		Next:        b.view.next[p.URL],
+		Stylesheets: b.styles,
+		Dev:         b.opts.Dev,
 	}
 	var buf bytes.Buffer
 	if err := b.tmpl.Execute(&buf, layout, data); err != nil {
 		b.dc.Errorf(p.File, 0, 0, "template.exec", "%v", err)
 		return nil, false
 	}
-	return buf.Bytes(), true
+	p.HTML = buf.Bytes()
+
+	for _, pr := range plugins.Each[plugin.PageRenderer](b.plugins) {
+		if err := pr.OnPageRendered(&p.Page, b.view); err != nil {
+			b.dc.Errorf(p.File, 0, 0, "plugin.error", "plugin %s: %v", pr.(plugin.Plugin).Name(), err)
+		}
+	}
+	return p.HTML, true
 }
 
 // renderNotFound always emits 404.html (spec §13).
 func (b *builder) renderNotFound(s *Site) {
 	data := &render.TemplateData{
-		Site: b.site,
-		Page: &render.PageInfo{Title: "Page not found", URL: "/" + NotFoundPath, TitleInBody: true},
-		Nav:  s.Nav,
-		Dev:  b.opts.Dev,
+		Site:        b.site,
+		Page:        &plugin.PageInfo{Title: "Page not found", URL: "/" + NotFoundPath, TitleInBody: true},
+		Nav:         s.Nav,
+		Stylesheets: b.styles,
+		Dev:         b.opts.Dev,
 	}
 	var buf bytes.Buffer
 	if err := b.tmpl.Execute(&buf, "404", data); err != nil {
@@ -282,12 +358,10 @@ func (b *builder) renderNotFound(s *Site) {
 	s.Outputs[NotFoundPath] = buf.Bytes()
 }
 
-// pageInfo copies the template-visible fields of p. It returns nil for nil.
-func pageInfo(p *content.Page) *render.PageInfo {
-	if p == nil {
-		return nil
-	}
-	return &render.PageInfo{
+// pageInfo copies the template- and plugin-visible fields of p.
+func pageInfo(p *content.Page) *plugin.PageInfo {
+	return &plugin.PageInfo{
+		SourcePath:  p.SourcePath,
 		Title:       p.Title,
 		NavTitle:    p.Front.NavTitle,
 		Description: p.Front.Description,
@@ -297,5 +371,24 @@ func pageInfo(p *content.Page) *render.PageInfo {
 		Weight:      p.Front.Weight,
 		TitleInBody: p.HasH1,
 		Params:      p.Front.Params,
+		Data:        maps.Clone(p.Data),
 	}
+}
+
+// outputs lets Finalizer plugins add files to the site.
+type outputs struct {
+	files  map[string][]byte
+	assets map[string]bool
+}
+
+func (o *outputs) Add(p string, data []byte) error {
+	clean := path.Clean("/" + strings.ReplaceAll(p, "\\", "/"))[1:]
+	if clean == "" || clean != strings.TrimPrefix(p, "/") || strings.HasSuffix(p, "/") {
+		return fmt.Errorf("invalid output path %q", p)
+	}
+	if _, ok := o.files[clean]; ok || o.assets[clean] {
+		return fmt.Errorf("output path %q is already produced", clean)
+	}
+	o.files[clean] = data
+	return nil
 }

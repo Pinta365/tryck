@@ -22,42 +22,28 @@ import (
 
 	"github.com/Pinta365/tryck/internal/diag"
 	"github.com/Pinta365/tryck/internal/markdown"
-	"github.com/Pinta365/tryck/internal/nav"
+	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
 //go:embed layouts
 var embedded embed.FS
 
 // SiteInfo is the site-wide data available to templates.
-type SiteInfo struct {
-	Title       string
-	Description string
-	BaseURL     string
-	Language    string
-}
+type SiteInfo = plugin.SiteInfo
 
-// PageInfo is the per-page data available to templates. It is a copy;
-// templates cannot reach mutable build state through it.
-type PageInfo struct {
-	Title       string
-	NavTitle    string
-	Description string
-	URL         string
-	Date        time.Time
-	Draft       bool
-	Weight      int
-	TitleInBody bool           // the body has its own h1, so layouts skip theirs
-	Params      map[string]any // front matter keys tryck does not know
-}
+// PageInfo is the per-page data available to templates.
+type PageInfo = plugin.PageInfo
 
 // TemplateData is the dot value of every layout (spec §9.2).
 type TemplateData struct {
-	Site       SiteInfo
-	Page       *PageInfo
-	Content    template.HTML // rendered body, already trusted
-	Nav        *nav.Node     // full tree with Active/InPath set for this page
-	Prev, Next *PageInfo     // nil at the ends
-	Dev        bool          // true in tryck dev
+	Site        SiteInfo
+	Page        *PageInfo
+	Content     template.HTML     // rendered body, already trusted
+	Nav         *plugin.NavNode   // full tree with Active/InPath set for this page
+	TOC         []plugin.TOCEntry // from the toc plugin, nil if disabled
+	Prev, Next  *PageInfo         // nil at the ends
+	Stylesheets []string          // site paths of plugin CSS to link in <head>
+	Dev         bool              // true in tryck dev
 }
 
 // ErrMissingLayout is returned by Execute for an unknown layout name.

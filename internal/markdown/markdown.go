@@ -15,6 +15,7 @@ import (
 	"github.com/yuin/goldmark/text"
 
 	"github.com/Pinta365/tryck/internal/diag"
+	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
 // Options configures the Markdown processor.
@@ -22,11 +23,16 @@ type Options struct {
 	// UnsafeHTML passes raw HTML in Markdown through. Otherwise it is
 	// replaced by an HTML comment (spec §9.4).
 	UnsafeHTML bool
+	// Extenders add goldmark extensions, such as syntax highlighting.
+	Extenders []plugin.MarkdownExtender
+	// Directives render ::: names tryck does not know, by name.
+	Directives map[string]plugin.DirectiveRenderer
 }
 
 // Processor parses and renders Markdown. It is safe for concurrent use.
 type Processor struct {
-	md goldmark.Markdown
+	md     goldmark.Markdown
+	custom map[string]plugin.DirectiveRenderer
 }
 
 // New returns a Processor configured from opts.
@@ -36,13 +42,16 @@ func New(opts Options) *Processor {
 		rendererOpts = append(rendererOpts, goldmark.WithRendererOptions(html.WithUnsafe()))
 	}
 	md := goldmark.New(append([]goldmark.Option{
-		goldmark.WithExtensions(extension.GFM, directives{}),
+		goldmark.WithExtensions(extension.GFM, directives{custom: opts.Directives}),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(), // via ids: Slugify, dupes get -1, -2
 			parser.WithAttribute(),     // {#custom-id} wins over the generated ID
 		),
 	}, rendererOpts...)...)
-	return &Processor{md: md}
+	for _, e := range opts.Extenders {
+		e.Extend(md)
+	}
+	return &Processor{md: md, custom: opts.Directives}
 }
 
 // Issue is a problem found while parsing, located by byte offset in the
@@ -60,11 +69,11 @@ func (p *Processor) Parse(source []byte) (ast.Node, []Issue) {
 	ids := newIDs()
 	ctx := parser.NewContext(parser.WithIDs(ids))
 	doc := p.md.Parser().Parse(text.NewReader(source), parser.WithContext(ctx))
-	return doc, inspect(doc, ids.suffixed)
+	return doc, p.inspect(doc, ids.suffixed)
 }
 
 // inspect walks a parsed document for problems the parser cannot report.
-func inspect(doc ast.Node, suffixed []string) []Issue {
+func (p *Processor) inspect(doc ast.Node, suffixed []string) []Issue {
 	var issues []Issue
 	dup := map[string]bool{}
 	for _, id := range suffixed {
@@ -80,7 +89,7 @@ func inspect(doc ast.Node, suffixed []string) []Issue {
 				issues = append(issues, Issue{diag.Error, "directive.unclosed", d.Offset,
 					fmt.Sprintf("%s%s directive is never closed; end it with a line of %d or more colons", strings.Repeat(":", d.Length), d.Name, d.Length)})
 			}
-			if _, ok := n.(*GenericDirective); ok {
+			if _, ok := n.(*GenericDirective); ok && p.custom[d.Name] == nil {
 				issues = append(issues, Issue{diag.Warning, "directive.unknown", d.Offset,
 					fmt.Sprintf("unknown directive %q, rendered as a plain <div>", d.Name)})
 			}

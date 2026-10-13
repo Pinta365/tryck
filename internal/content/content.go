@@ -13,27 +13,18 @@ import (
 	"unicode/utf8"
 
 	"github.com/yuin/goldmark/ast"
+
+	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
-// Page is one Markdown source file and everything derived from it.
+// Page is one Markdown source file and everything derived from it. The
+// embedded plugin.Page is the part plugins see.
 type Page struct {
-	SourcePath string // relative to contentDir, forward slashes
-	File       string // relative to project root, for diagnostics
-	URL        string // "/docs/setup/"
-	OutPath    string // relative to outputDir: "docs/setup/index.html"
-	Front      FrontMatter
-	Title      string // front matter title, first h1, or file name
-	HasH1      bool   // the body contains a level-1 heading
-	Source     []byte // body without front matter
-	BodyLine   int    // file line of the first body line
-	AST        ast.Node
-	HTML       []byte // rendered body fragment
-}
-
-// LineAt converts a byte offset in Source to a 1-based file line.
-func (p *Page) LineAt(offset int) int {
-	offset = min(offset, len(p.Source))
-	return p.BodyLine + bytes.Count(p.Source[:offset], []byte("\n"))
+	plugin.Page
+	File    string // relative to project root, for diagnostics
+	OutPath string // relative to outputDir: "docs/setup/index.html"
+	Title   string // front matter title, first h1, or file name
+	HasH1   bool   // the body contains a level-1 heading
 }
 
 // Asset is a non-Markdown file inside contentDir, copied next to pages.

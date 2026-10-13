@@ -1,0 +1,13 @@
+{{- define "tryck-toc" -}}
+<ul>
+{{- range . }}
+<li><a href="#{{ .ID }}">{{ .Text }}</a>{{ with .Children }}{{ template "tryck-toc" . }}{{ end }}</li>
+{{- end }}
+</ul>
+{{- end -}}
+{{- with .TOC }}
+<nav class="toc" aria-label="On this page">
+<p class="toc-title">On this page</p>
+{{ template "tryck-toc" . }}
+</nav>
+{{- end }}

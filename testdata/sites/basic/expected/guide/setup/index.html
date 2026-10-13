@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Setup &amp; install · Basic Docs</title>
 <meta name="description" content="How to &lt;install&gt; it.">
+<link rel="stylesheet" href="/basic/css/chroma.css">
 <style>
 :root {
   --fg: #1f2328; --muted: #59636e; --bg: #fff; --bg-alt: #f6f8fa; --line: #d1d9e0; --link: #0969da; --warn-bg: #fff8c5; --warn-line: #d4a72c;
@@ -33,6 +34,14 @@ a { color: var(--link); }
 .nav-section { color: var(--muted); font-weight: 600; }
 .content { flex: 1 1 32rem; min-width: 0; max-width: 48rem; margin: 0 auto; padding: 1rem; }
 .post-date { color: var(--muted); }
+.toc { flex: 0 0 14rem; align-self: flex-start; position: sticky; top: 0; padding: 1rem; font-size: 0.875rem; }
+.toc ul { list-style: none; margin: 0; padding-left: 0.75rem; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 0.2rem 0; }
+.toc a { color: var(--muted); text-decoration: none; }
+.toc a:hover { color: var(--link); }
+.toc-title { margin: 0 0 0.5rem; font-weight: 600; }
+.reading-time { color: var(--muted); }
 .pager { display: flex; gap: 1rem; justify-content: space-between; margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); }
 .pager a { display: flex; flex-direction: column; text-decoration: none; }
 .pager span { color: var(--muted); font-size: 0.85rem; }
@@ -59,6 +68,7 @@ details.details > summary { cursor: pointer; font-weight: 600; }
 .tab-list [role="tab"][aria-selected="true"] { border-bottom-color: var(--link); color: var(--fg); font-weight: 600; }
 .tab-label { margin: 1rem 0 0.25rem; font-weight: 600; }
 .tabs-js .tab-label { display: none; }
+@media (max-width: 72rem) { .toc { display: none; } }
 @media (max-width: 50rem) { .sidebar { flex-basis: 100%; border-bottom: 1px solid var(--line); } }
 </style>
 </head>
@@ -97,9 +107,8 @@ details.details > summary { cursor: pointer; font-weight: 600; }
 <li><input checked="" disabled="" type="checkbox"> Download</li>
 <li><input disabled="" type="checkbox"> Run <del>make</del> <code>tryck build</code></li>
 </ul>
-<pre><code class="language-go">fmt.Println(&quot;hi&quot;)
-</code></pre>
-<!-- raw HTML omitted -->
+<pre class="chroma"><code><span class="line"><span class="ln">1</span><span class="cl"><span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;hi&#34;</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre><!-- raw HTML omitted -->
 <h2 id="requirements-1">Requirements</h2>
 <h2 id="my-id">Custom</h2>
 <p><img src="diagram.png" alt="diagram"> <a href="https://example.org">https://example.org</a></p>
@@ -110,6 +119,16 @@ details.details > summary { cursor: pointer; font-weight: 600; }
 <a class="pager-next" rel="next" href="/basic/guide/directives/"><span>Next</span>Directives</a>
 </nav>
 </main>
+
+<nav class="toc" aria-label="On this page">
+<p class="toc-title">On this page</p>
+<ul>
+<li><a href="#requirements">Requirements</a></li>
+<li><a href="#requirements-1">Requirements</a></li>
+<li><a href="#my-id">Custom</a></li>
+</ul>
+</nav>
+
 </div>
 
 <script>

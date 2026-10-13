@@ -11,6 +11,8 @@ import (
 	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
+
+	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
 // Directive blocks (spec §7.2):
@@ -266,12 +268,14 @@ func (tabParser) CanInterruptParagraph() bool                                { r
 func (tabParser) CanAcceptIndentedLine() bool                                { return false }
 
 // directives is the goldmark extension for ::: blocks.
-type directives struct{}
+type directives struct {
+	custom map[string]plugin.DirectiveRenderer
+}
 
-func (directives) Extend(m goldmark.Markdown) {
+func (d directives) Extend(m goldmark.Markdown) {
 	m.Parser().AddOptions(parser.WithBlockParsers(
 		util.Prioritized(directiveParser{}, 50),
 		util.Prioritized(tabParser{}, 50),
 	))
-	m.Renderer().AddOptions(renderer.WithNodeRenderers(util.Prioritized(directiveRenderer{}, 500)))
+	m.Renderer().AddOptions(renderer.WithNodeRenderers(util.Prioritized(directiveRenderer{custom: d.custom}, 500)))
 }

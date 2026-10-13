@@ -6,27 +6,15 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/Pinta365/tryck/internal/diag"
+	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
 // FrontMatter is the YAML header of a page (spec §5.1).
-type FrontMatter struct {
-	Title       string         `yaml:"title"`
-	Description string         `yaml:"description"`
-	Layout      string         `yaml:"layout"`
-	Date        time.Time      `yaml:"date"`
-	Draft       bool           `yaml:"draft"`
-	Weight      int            `yaml:"weight"`   // nav ordering
-	NavTitle    string         `yaml:"navTitle"` // shorter sidebar label
-	TOC         *bool          `yaml:"toc"`      // nil = config default
-	Slug        string         `yaml:"slug"`     // overrides URL segment
-	Aliases     []string       `yaml:"aliases"`  // old URLs -> redirect pages
-	Params      map[string]any `yaml:",inline"`
-}
+type FrontMatter = plugin.FrontMatter
 
 var utf8BOM = []byte("\xef\xbb\xbf")
 

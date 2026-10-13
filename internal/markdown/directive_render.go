@@ -9,16 +9,20 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/util"
+
+	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
-type directiveRenderer struct{}
+type directiveRenderer struct {
+	custom map[string]plugin.DirectiveRenderer // by directive name
+}
 
-func (directiveRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
+func (r directiveRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 	reg.Register(KindAdmonition, renderAdmonition)
 	reg.Register(KindDetails, renderDetails)
 	reg.Register(KindTabs, renderTabs)
 	reg.Register(KindTab, renderTab)
-	reg.Register(KindGenericDirective, renderGeneric)
+	reg.Register(KindGenericDirective, r.renderGeneric)
 }
 
 func renderAdmonition(w util.BufWriter, _ []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -52,8 +56,18 @@ func renderDetails(w util.BufWriter, _ []byte, node ast.Node, entering bool) (as
 	return ast.WalkContinue, nil
 }
 
-func renderGeneric(w util.BufWriter, _ []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+func (r directiveRenderer) renderGeneric(w util.BufWriter, _ []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	n := node.(*GenericDirective)
+	if pr, ok := r.custom[n.Name]; ok {
+		d := plugin.Directive{Name: n.Name, Title: n.Title, Attrs: map[string]string{}}
+		for _, a := range n.Attributes() {
+			d.Attrs[string(a.Name)] = string(attrBytes(a.Value))
+		}
+		if err := pr.RenderDirective(w, d, entering); err != nil {
+			return ast.WalkStop, fmt.Errorf(":::%s: %w", n.Name, err)
+		}
+		return ast.WalkContinue, nil
+	}
 	if !entering {
 		w.WriteString("</div>\n")
 		return ast.WalkContinue, nil

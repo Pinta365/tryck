@@ -7,6 +7,9 @@
 {{- with or .Page.Description .Site.Description }}
 <meta name="description" content="{{ . }}">
 {{- end }}
+{{- range .Stylesheets }}
+<link rel="stylesheet" href="{{ relURL . }}">
+{{- end }}
 <style>
 :root {
   --fg: #1f2328; --muted: #59636e; --bg: #fff; --bg-alt: #f6f8fa; --line: #d1d9e0; --link: #0969da; --warn-bg: #fff8c5; --warn-line: #d4a72c;
@@ -35,6 +38,14 @@ a { color: var(--link); }
 .nav-section { color: var(--muted); font-weight: 600; }
 .content { flex: 1 1 32rem; min-width: 0; max-width: 48rem; margin: 0 auto; padding: 1rem; }
 .post-date { color: var(--muted); }
+.toc { flex: 0 0 14rem; align-self: flex-start; position: sticky; top: 0; padding: 1rem; font-size: 0.875rem; }
+.toc ul { list-style: none; margin: 0; padding-left: 0.75rem; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 0.2rem 0; }
+.toc a { color: var(--muted); text-decoration: none; }
+.toc a:hover { color: var(--link); }
+.toc-title { margin: 0 0 0.5rem; font-weight: 600; }
+.reading-time { color: var(--muted); }
 .pager { display: flex; gap: 1rem; justify-content: space-between; margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); }
 .pager a { display: flex; flex-direction: column; text-decoration: none; }
 .pager span { color: var(--muted); font-size: 0.85rem; }
@@ -61,6 +72,7 @@ details.details > summary { cursor: pointer; font-weight: 600; }
 .tab-list [role="tab"][aria-selected="true"] { border-bottom-color: var(--link); color: var(--fg); font-weight: 600; }
 .tab-label { margin: 1rem 0 0.25rem; font-weight: 600; }
 .tabs-js .tab-label { display: none; }
+@media (max-width: 72rem) { .toc { display: none; } }
 @media (max-width: 50rem) { .sidebar { flex-basis: 100%; border-bottom: 1px solid var(--line); } }
 </style>
 </head>

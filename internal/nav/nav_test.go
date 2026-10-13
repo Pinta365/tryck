@@ -9,12 +9,11 @@ import (
 )
 
 func page(rel, title string, weight int) *content.Page {
-	return &content.Page{
-		SourcePath: rel,
-		URL:        content.URLFor(rel, ""),
-		Title:      title,
-		Front:      content.FrontMatter{Weight: weight},
-	}
+	p := &content.Page{Title: title}
+	p.SourcePath = rel
+	p.URL = content.URLFor(rel, "")
+	p.Front.Weight = weight
+	return p
 }
 
 // dump renders the tree as indented "Title url" lines.
