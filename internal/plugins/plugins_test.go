@@ -132,9 +132,17 @@ func TestHighlight(t *testing.T) {
 	for _, want := range []string{
 		`:root[data-theme="dark"] .chroma .k {`,
 		"@media (prefers-color-scheme: dark) {\n  :root:not([data-theme=\"light\"]) .bg {",
+		`:root[data-theme="light"] .chroma .nx {`,
+		"@media (prefers-color-scheme: light) {\n  :root:not([data-theme=\"dark\"]) .bg {",
 	} {
 		if !strings.Contains(css, want) {
 			t.Errorf("dark chroma.css missing %q", want)
+		}
+	}
+	// No rule may apply in both modes.
+	for _, line := range strings.Split(css, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), ".") {
+			t.Errorf("unscoped rule: %s", line)
 		}
 	}
 	if err := (&Highlight{}).Init(map[string]any{"darkTheme": "nope"}, plugin.SiteInfo{}); err == nil {

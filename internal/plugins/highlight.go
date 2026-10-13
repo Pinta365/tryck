@@ -54,20 +54,30 @@ func (h *Highlight) Extend(m goldmark.Markdown) {
 }
 
 func (h *Highlight) OnBuildComplete(_ plugin.SiteView, out plugin.Outputs) error {
-	var buf bytes.Buffer
 	f := chromahtml.New(h.formatOptions()...)
-	if err := f.WriteCSS(&buf, styles.Get(h.Theme)); err != nil {
+	var light bytes.Buffer
+	if err := f.WriteCSS(&light, styles.Get(h.Theme)); err != nil {
 		return err
 	}
-	if h.DarkTheme != "" && h.DarkTheme != h.Theme {
-		var dark bytes.Buffer
-		if err := f.WriteCSS(&dark, styles.Get(h.DarkTheme)); err != nil {
-			return err
-		}
-		buf.WriteString("/* Dark mode: " + h.DarkTheme + " */\n")
-		buf.WriteString(scopeCSS(dark.String(), `:root[data-theme="dark"]`, ""))
-		buf.WriteString("@media (prefers-color-scheme: dark) {\n")
-		buf.WriteString(scopeCSS(dark.String(), `:root:not([data-theme="light"])`, "  "))
+	if h.DarkTheme == "" || h.DarkTheme == h.Theme {
+		return out.Add(chromaCSSPath, light.Bytes())
+	}
+	var dark bytes.Buffer
+	if err := f.WriteCSS(&dark, styles.Get(h.DarkTheme)); err != nil {
+		return err
+	}
+	// Each theme only applies in its own mode. Themes style different
+	// token classes, so unscoped light rules would leak into dark mode
+	// wherever the dark theme has no rule (and the other way round).
+	var buf bytes.Buffer
+	for _, mode := range []struct{ name, theme, css, other string }{
+		{"light", h.Theme, light.String(), "dark"},
+		{"dark", h.DarkTheme, dark.String(), "light"},
+	} {
+		fmt.Fprintf(&buf, "/* %s mode: %s */\n", mode.name, mode.theme)
+		buf.WriteString(scopeCSS(mode.css, `:root[data-theme="`+mode.name+`"]`, ""))
+		fmt.Fprintf(&buf, "@media (prefers-color-scheme: %s) {\n", mode.name)
+		buf.WriteString(scopeCSS(mode.css, `:root:not([data-theme="`+mode.other+`"])`, "  "))
 		buf.WriteString("}\n")
 	}
 	return out.Add(chromaCSSPath, buf.Bytes())
