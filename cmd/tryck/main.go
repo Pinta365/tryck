@@ -166,23 +166,27 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 	log.Debug("config loaded", "path", cfg.Path, "root", cfg.Root, "baseUrl", cfg.Site.BaseURL, "workers", cfg.WorkerCount())
 
 	start := time.Now()
-	site, err := build.Build(context.Background(), cfg, build.Options{})
+	site, err := build.Build(context.Background(), cfg, build.Options{Logger: log})
 	if err != nil {
 		fmt.Fprintf(stderr, "tryck build: %v\n", err)
 		return exitBuild
 	}
 	for _, d := range site.Diags {
-		fmt.Fprintln(stderr, diag.Format(d))
+		if d.Severity > diag.Info || *verbose {
+			fmt.Fprintln(stderr, diag.Format(d))
+		}
 	}
 	log.Debug("site built", "pages", len(site.Pages), "duration", time.Since(start))
 
 	var st output.Stats
 	if !site.HasErrors() {
+		emitStart := time.Now()
 		st, err = output.Write(site)
 		if err != nil {
 			fmt.Fprintf(stderr, "tryck build: %v\n", err)
 			return exitBuild
 		}
+		log.Debug("stage done", "stage", "emit", "duration", time.Since(emitStart), "files", st.Pages+st.Copied)
 	}
 
 	warnings, errs := 0, 0

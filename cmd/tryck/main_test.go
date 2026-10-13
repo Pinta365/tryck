@@ -37,7 +37,7 @@ func TestRun(t *testing.T) {
 		{name: "help", args: []string{"help"}, wantCode: 0, wantStdout: "Usage:"},
 		{name: "version", args: []string{"version"}, wantCode: 0, wantStdout: "tryck dev\n"},
 		{name: "unknown command", args: []string{"serve"}, wantCode: 2, wantStderr: `unknown command "serve"`},
-		{name: "build without config", args: []string{"build"}, wantCode: 0, wantStdout: "Built 0 pages, copied 0 files, 0 warnings, 0 errors"},
+		{name: "build without config", args: []string{"build"}, wantCode: 0, wantStdout: "Built 1 pages, copied 0 files, 0 warnings, 0 errors"},
 		{name: "build bad flag", args: []string{"build", "--nope"}, wantCode: 2, wantStderr: "flag provided but not defined"},
 		{name: "build extra arg", args: []string{"build", "site"}, wantCode: 2, wantStderr: `unexpected argument "site"`},
 		{name: "build -h", args: []string{"build", "-h"}, wantCode: 0, wantStderr: "-base-url"},
@@ -69,10 +69,17 @@ func TestRun(t *testing.T) {
 			config:     "build:\n  workers: -2\n",
 			args:       []string{"build", "--workers", "2"},
 			wantCode:   0,
-			wantStdout: "Built 0 pages",
+			wantStdout: "Built 1 pages",
 		},
 		{name: "build invalid base-url flag", args: []string{"build", "--base-url", "ftp://x"}, wantCode: 2, wantStderr: "site.baseUrl"},
 		{name: "build verbose logs config", args: []string{"build", "--verbose"}, wantCode: 0, wantStderr: "config loaded"},
+		{
+			name:       "info diagnostics need verbose",
+			config:     "site:\n  title: x\n",
+			args:       []string{"build", "--verbose"},
+			wantCode:   0,
+			wantStderr: "info[heading.duplicateId]",
+		},
 		{name: "dev", args: []string{"dev", "--port", "9000"}, wantCode: 0, wantStderr: "not implemented"},
 		{name: "dev bad port", args: []string{"dev", "--port", "0"}, wantCode: 2, wantStderr: "invalid port"},
 		{name: "init with dir", args: []string{"init", "mysite"}, wantCode: 0, wantStderr: "not implemented"},
@@ -81,6 +88,12 @@ func TestRun(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
+			if err := os.MkdirAll(filepath.Join(dir, "content"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "content", "a.md"), []byte("## A\n\n## A\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
 			if tt.config != "" {
 				if err := os.WriteFile(filepath.Join(dir, "tryck.config.yaml"), []byte(tt.config), 0o644); err != nil {
 					t.Fatal(err)
@@ -97,5 +110,19 @@ func TestRun(t *testing.T) {
 				t.Errorf("stderr = %q, want substring %q", stderr, tt.wantStderr)
 			}
 		})
+	}
+}
+
+func TestInfoHiddenWithoutVerbose(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "content"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "content", "a.md"), []byte("## A\n\n## A\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, _, stderr := runIn(t, dir, "build")
+	if code != 0 || strings.Contains(stderr, "info[") {
+		t.Errorf("code %d, stderr %q: info diagnostics should be hidden", code, stderr)
 	}
 }

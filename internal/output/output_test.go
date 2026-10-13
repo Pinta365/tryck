@@ -113,3 +113,17 @@ func TestCleanAllowsNestedOutput(t *testing.T) {
 		t.Error("nested output not written")
 	}
 }
+
+func TestAssetOverridesStaticFile(t *testing.T) {
+	site, root := newSite(t)
+	write(t, filepath.Join(root, "static/docs/img.png"), "static")
+	write(t, filepath.Join(root, "content/docs/img.png"), "content")
+	site.Assets = []content.Asset{{Src: filepath.Join(root, "content/docs/img.png"), OutPath: "docs/img.png"}}
+	st, err := Write(site)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := read(t, filepath.Join(root, "dist/docs/img.png")); got != "content" || st.Copied != 1 {
+		t.Errorf("img = %q, copied = %d; want content asset copied once", got, st.Copied)
+	}
+}

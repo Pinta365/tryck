@@ -1,9 +1,10 @@
+{{- /* Top-level entries always show; a section expands only on the path to the current page. */ -}}
 {{- define "tryck-nav" -}}
 <ul>
 {{- range . }}
 <li{{ if .InPath }} class="in-path"{{ end }}>
 {{- if .URL }}<a href="{{ relURL .URL }}"{{ if .Active }} aria-current="page"{{ end }}>{{ .Title }}</a>{{ else }}<span class="nav-section">{{ .Title }}</span>{{ end }}
-{{- with .Children }}{{ template "tryck-nav" . }}{{ end -}}
+{{- if .InPath }}{{ with .Children }}{{ template "tryck-nav" . }}{{ end }}{{ end -}}
 </li>
 {{- end }}
 </ul>

@@ -10,6 +10,8 @@ import (
 	"errors"
 	"github.com/yuin/goldmark/ast"
 	"html/template"
+	"io"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -23,6 +25,7 @@ import (
 	"github.com/Pinta365/tryck/internal/markdown"
 	"github.com/Pinta365/tryck/internal/nav"
 	"github.com/Pinta365/tryck/internal/render"
+	"github.com/Pinta365/tryck/internal/workpool"
 )
 
 // NotFoundPath is the output path of the 404 page, served by both
@@ -46,7 +49,8 @@ func (s *Site) HasErrors() bool { return diag.HasErrors(s.Diags) }
 
 // Options adjust a build.
 type Options struct {
-	Dev bool // set TemplateData.Dev
+	Dev    bool         // set TemplateData.Dev
+	Logger *slog.Logger // debug logs with per-stage timings; nil = silent
 }
 
 type builder struct {
@@ -76,6 +80,15 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 		},
 	}
 	s := &Site{Config: cfg, ByURL: map[string]*content.Page{}, Outputs: map[string][]byte{}}
+	log := opts.Logger
+	if log == nil {
+		log = slog.New(slog.NewTextHandler(io.Discard, nil)) // debug is below its level
+	}
+	stageStart := time.Now()
+	stage := func(name string, args ...any) {
+		log.Debug("stage done", append([]any{"stage", name, "duration", time.Since(stageStart)}, args...)...)
+		stageStart = time.Now()
+	}
 
 	// [1] Load
 	funcs := render.Funcs(render.FuncOptions{
@@ -93,19 +106,29 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 		b.dc.Errorf(b.rel(contentDir), 0, 0, "content.read", "cannot read content: %v", err)
 	}
 	s.Assets = src.Assets
+	stage("load", "pages", len(src.Pages), "assets", len(src.Assets))
 
-	// [2] Parse
-	for _, rel := range src.Pages {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		if p := b.parse(contentDir, rel); p != nil {
+	// [2] Parse, in parallel. A page only touches its own Page.
+	workers := cfg.WorkerCount()
+	parsed := make([]*content.Page, len(src.Pages))
+	err = workpool.Run(ctx, len(src.Pages), workers, func(i int) {
+		parsed[i] = b.parse(contentDir, src.Pages[i])
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range parsed {
+		if p != nil {
 			b.pages = append(b.pages, p)
 		}
 	}
+	stage("parse", "workers", workers)
 
-	// [3] Index
-	slices.SortFunc(b.pages, func(x, y *content.Page) int { return strings.Compare(x.URL, y.URL) })
+	// [3] Index, sequential. Pages, ByURL, Nav, prev and next are
+	// read-only from here on.
+	slices.SortFunc(b.pages, func(x, y *content.Page) int {
+		return cmp.Or(strings.Compare(x.URL, y.URL), strings.Compare(x.SourcePath, y.SourcePath))
+	})
 	for _, p := range b.pages {
 		if prev, ok := s.ByURL[p.URL]; ok {
 			b.dc.Errorf(p.File, 0, 0, "url.conflict", "%s maps to %s, which is already used by %s", p.File, p.URL, prev.File)
@@ -121,17 +144,25 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 		b.prev[order[i]] = s.ByURL[order[i-1]]
 		b.next[order[i-1]] = s.ByURL[order[i]]
 	}
+	stage("index")
 
-	// [4] Render
-	for _, p := range s.Pages {
-		if err := ctx.Err(); err != nil {
-			return nil, err
+	// [4] Render, in parallel.
+	rendered := make([][]byte, len(s.Pages))
+	err = workpool.Run(ctx, len(s.Pages), workers, func(i int) {
+		if out, ok := b.render(s, s.Pages[i]); ok {
+			rendered[i] = out
 		}
-		if out, ok := b.render(s, p); ok {
-			s.Outputs[p.OutPath] = out
+	})
+	if err != nil {
+		return nil, err
+	}
+	for i, p := range s.Pages {
+		if rendered[i] != nil {
+			s.Outputs[p.OutPath] = rendered[i]
 		}
 	}
 	b.renderNotFound(s)
+	stage("render", "workers", workers)
 
 	// [5] Finalize: assets must not overwrite generated pages.
 	for _, a := range s.Assets {
@@ -139,6 +170,8 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 			b.dc.Errorf(b.rel(a.Src), 0, 0, "url.conflict", "%s would overwrite generated %s", b.rel(a.Src), a.OutPath)
 		}
 	}
+
+	stage("finalize")
 
 	s.Diags = b.dc.All()
 	s.BuiltAt = time.Now()

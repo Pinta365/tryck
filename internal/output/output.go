@@ -2,14 +2,19 @@
 package output
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 
 	"github.com/Pinta365/tryck/internal/build"
+	"github.com/Pinta365/tryck/internal/workpool"
 )
 
 // Stats summarizes what Write produced.
@@ -38,24 +43,67 @@ func Write(site *build.Site) (Stats, error) {
 		return st, err
 	}
 
-	n, err := copyTree(cfg.Dir(cfg.Build.StaticDir), out)
-	st.Copied += n
-	if err != nil {
+	// Copies run first and in parallel; generated files are written
+	// after, so they win over a copied file with the same path.
+	var copies []copyJob
+	static := cfg.Dir(cfg.Build.StaticDir)
+	if err := walkFiles(static, func(src, rel string) {
+		copies = append(copies, copyJob{src, filepath.Join(out, rel)})
+	}); err != nil {
 		return st, fmt.Errorf("copy static files: %w", err)
 	}
 	for _, a := range site.Assets {
-		if err := copyFile(a.Src, filepath.Join(out, filepath.FromSlash(a.OutPath))); err != nil {
-			return st, fmt.Errorf("copy %s: %w", a.Src, err)
-		}
-		st.Copied++
+		copies = append(copies, copyJob{a.Src, filepath.Join(out, filepath.FromSlash(a.OutPath))})
 	}
-	for p, data := range site.Outputs {
-		if err := writeFile(filepath.Join(out, filepath.FromSlash(p)), data); err != nil {
-			return st, err
-		}
-		st.Pages++
+	// Two sources for one destination must not be copied concurrently;
+	// the later one (a content asset over a static file) wins.
+	last := map[string]int{}
+	for i, c := range copies {
+		last[c.dst] = i
 	}
+	kept := copies[:0]
+	for i, c := range copies {
+		if last[c.dst] == i {
+			kept = append(kept, c)
+		}
+	}
+	copies = kept
+	workers := cfg.WorkerCount()
+	if err := runAll(len(copies), workers, func(i int) error {
+		if err := copyFile(copies[i].src, copies[i].dst); err != nil {
+			return fmt.Errorf("copy %s: %w", copies[i].src, err)
+		}
+		return nil
+	}); err != nil {
+		return st, err
+	}
+	st.Copied = len(copies)
+
+	paths := slices.Sorted(maps.Keys(site.Outputs))
+	if err := runAll(len(paths), workers, func(i int) error {
+		return writeFile(filepath.Join(out, filepath.FromSlash(paths[i])), site.Outputs[paths[i]])
+	}); err != nil {
+		return st, err
+	}
+	st.Pages = len(paths)
 	return st, nil
+}
+
+type copyJob struct{ src, dst string }
+
+// runAll runs fn for [0, n) on a worker pool and returns the first error.
+// Remaining items are skipped after an error.
+func runAll(n, workers int, fn func(i int) error) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var once sync.Once
+	var first error
+	_ = workpool.Run(ctx, n, workers, func(i int) {
+		if err := fn(i); err != nil {
+			once.Do(func() { first = err; cancel() })
+		}
+	})
+	return first
 }
 
 // checkCleanable refuses to clean an outputDir that is, or contains, the
@@ -98,13 +146,12 @@ func clean(dir string) error {
 	return nil
 }
 
-// copyTree copies every regular file under src into dst. A missing src
-// copies nothing.
-func copyTree(src, dst string) (int, error) {
-	n := 0
-	err := filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
+// walkFiles calls fn for every regular file under root with its path
+// relative to root. A missing root yields nothing.
+func walkFiles(root string, fn func(path, rel string)) error {
+	return filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
-			if p == src && os.IsNotExist(err) {
+			if p == root && os.IsNotExist(err) {
 				return fs.SkipAll
 			}
 			return err
@@ -112,17 +159,13 @@ func copyTree(src, dst string) (int, error) {
 		if !d.Type().IsRegular() {
 			return nil
 		}
-		rel, err := filepath.Rel(src, p)
+		rel, err := filepath.Rel(root, p)
 		if err != nil {
 			return err
 		}
-		if err := copyFile(p, filepath.Join(dst, rel)); err != nil {
-			return err
-		}
-		n++
+		fn(p, rel)
 		return nil
 	})
-	return n, err
 }
 
 func copyFile(src, dst string) error {
