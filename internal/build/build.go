@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"html/template"
@@ -58,6 +59,7 @@ type Options struct {
 	Dev     bool            // building for tryck dev
 	Logger  *slog.Logger    // debug logs with per-stage timings; nil = silent
 	Plugins []plugin.Plugin // compiled-in plugins in addition to the built-ins
+	Cache   *Cache          // parsed pages reused between builds; nil = none
 }
 
 type builder struct {
@@ -223,6 +225,7 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 
 	s.Diags = b.dc.All()
 	s.BuiltAt = time.Now()
+	opts.Cache.prune()
 	return s, nil
 }
 
@@ -264,7 +267,7 @@ func (b *builder) readPage(contentDir, rel string) *content.Page {
 		return nil
 	}
 
-	p := &content.Page{File: file}
+	p := &content.Page{File: file, Hash: sha256.Sum256(raw)}
 	p.SourcePath = rel
 	p.Front = front
 	p.Source = body
@@ -280,19 +283,23 @@ func (b *builder) readPage(contentDir, rel string) *content.Page {
 // PageParser plugins.
 func (b *builder) parsePage(p *content.Page, links *linkResolver) {
 	file, body := p.File, p.Source
-	var issues []markdown.Issue
-	p.AST, issues = b.md.Parse(body)
-	for _, is := range issues {
+	e := b.opts.Cache.get(p.SourcePath, p.Hash)
+	if e == nil {
+		doc, issues := b.md.Parse(body)
+		e = &parsed{sum: p.Hash, doc: doc, issues: issues, h1: content.FirstH1(doc, body), links: collectLinks(doc)}
+		b.opts.Cache.put(p.SourcePath, e)
+	}
+	p.AST = e.doc
+	for _, is := range e.issues {
 		line := 0
 		if is.Offset >= 0 {
 			line = p.LineAt(is.Offset)
 		}
 		b.dc.Add(diag.Diagnostic{Severity: is.Severity, File: file, Line: line, Code: is.Code, Message: is.Message})
 	}
-	h1 := content.FirstH1(p.AST, body)
-	p.HasH1 = h1 != ""
-	p.Title = cmp.Or(p.Front.Title, h1, content.TitleFromPath(p.SourcePath), b.cfg.Site.Title, "Home")
-	links.rewriteLinks(p)
+	p.HasH1 = e.h1 != ""
+	p.Title = cmp.Or(p.Front.Title, e.h1, content.TitleFromPath(p.SourcePath), b.cfg.Site.Title, "Home")
+	links.rewrite(p.SourcePath, e.links)
 
 	for _, pp := range plugins.Each[plugin.PageParser](b.plugins) {
 		if err := pp.OnPageParsed(&p.Page); err != nil {

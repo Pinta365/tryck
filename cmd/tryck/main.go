@@ -9,12 +9,18 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"net/http"
 	"os"
+	"os/exec"
+	"os/signal"
+	"runtime"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/Pinta365/tryck/internal/build"
 	"github.com/Pinta365/tryck/internal/config"
+	"github.com/Pinta365/tryck/internal/devserver"
 	"github.com/Pinta365/tryck/internal/diag"
 	"github.com/Pinta365/tryck/internal/output"
 )
@@ -33,7 +39,7 @@ const usage = `tryck builds static documentation sites from Markdown.
 
 Usage:
   tryck build [--config tryck.config.yaml] [--output ./dist] [--drafts] [--base-url URL] [--workers N] [--verbose]
-  tryck dev   [--config tryck.config.yaml] [--port 8080] [--host 127.0.0.1] [--open]
+  tryck dev   [--config tryck.config.yaml] [--port 8080] [--host 127.0.0.1] [--open] [--verbose]
   tryck init  [dir]
   tryck version
 
@@ -211,7 +217,8 @@ func runDev(args []string, stdout, stderr io.Writer) int {
 	configPath := fs.String("config", config.DefaultPath, "config file")
 	port := fs.Int("port", 8080, "port to listen on")
 	host := fs.String("host", "127.0.0.1", "host to bind to")
-	_ = fs.Bool("open", false, "open the site in a browser")
+	open := fs.Bool("open", false, "open the site in a browser")
+	verbose := fs.Bool("verbose", false, "debug logging and info diagnostics")
 	if code, ok := parseFlags(fs, args, 0, stderr); !ok {
 		return code
 	}
@@ -222,17 +229,71 @@ func runDev(args []string, stdout, stderr io.Writer) int {
 
 	// dev always includes drafts and serves from its own address (spec §5.4, §12).
 	addr := net.JoinHostPort(*host, strconv.Itoa(*port))
-	ov := config.Overrides{
-		BaseURL: ptr("http://" + addr + "/"),
-		Drafts:  ptr(true),
-	}
-	cfg, _ := loadConfig(*configPath, setFlags(fs)["config"], ov, stderr)
+	siteURL := "http://" + addr + "/"
+	ov := config.Overrides{BaseURL: ptr(siteURL), Drafts: ptr(true)}
+	explicit := setFlags(fs)["config"]
+	cfg, _ := loadConfig(*configPath, explicit, ov, stderr)
 	if cfg == nil {
 		return exitConfig
 	}
 
-	fmt.Fprintln(stderr, "tryck dev: not implemented yet")
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		fmt.Fprintf(stderr, "tryck dev: %v\n", err)
+		return exitBuild
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	cfgFile := *configPath
+	if cfg.Path == "" && !explicit {
+		cfgFile = config.DefaultPath // not there yet; picked up if created
+	}
+	srv := devserver.New(cfg, devserver.Options{
+		ConfigPath:     cfgFile,
+		ConfigExplicit: explicit,
+		Overrides:      ov,
+		Out:            stderr,
+		Logger:         newLogger(stderr, *verbose),
+		Verbose:        *verbose,
+	})
+	start := time.Now()
+	if err := srv.Start(ctx); err != nil {
+		fmt.Fprintf(stderr, "tryck dev: %v\n", err)
+		return exitBuild
+	}
+	fmt.Fprintf(stdout, "Built in %s. Serving %s (Ctrl+C to stop)\n", roundDuration(time.Since(start)), siteURL)
+
+	hs := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second}
+	go func() {
+		<-ctx.Done()
+		shutdown, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = hs.Shutdown(shutdown)
+	}()
+	if *open {
+		openBrowser(siteURL)
+	}
+	if err := hs.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		fmt.Fprintf(stderr, "tryck dev: %v\n", err)
+		return exitBuild
+	}
+	<-srv.Done()
 	return exitOK
+}
+
+// openBrowser opens url with the platform's default handler.
+func openBrowser(url string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	_ = cmd.Start()
 }
 
 func runInit(args []string, stdout, stderr io.Writer) int {

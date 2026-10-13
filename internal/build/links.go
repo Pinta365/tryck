@@ -97,22 +97,35 @@ func (r *linkResolver) page(rel string) string {
 	return content.URLFor(rel, "")
 }
 
-// rewriteLinks updates every link and image destination in p's AST.
-func (r *linkResolver) rewriteLinks(p *content.Page) {
-	_ = ast.Walk(p.AST, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+// collectLinks lists every link and image in doc with its destination
+// as written in the source.
+func collectLinks(doc ast.Node) []linkRef {
+	var refs []linkRef
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
 		switch l := n.(type) {
 		case *ast.Link:
-			if d, ok := r.resolve(p.SourcePath, string(l.Destination)); ok {
-				l.Destination = []byte(d)
-			}
+			refs = append(refs, linkRef{n, string(l.Destination)})
 		case *ast.Image:
-			if d, ok := r.resolve(p.SourcePath, string(l.Destination)); ok {
-				l.Destination = []byte(d)
-			}
+			refs = append(refs, linkRef{n, string(l.Destination)})
 		}
 		return ast.WalkContinue, nil
 	})
+	return refs
+}
+
+// rewrite sets each link's destination from its original one, so it can
+// be applied again to a cached AST.
+func (r *linkResolver) rewrite(sourcePath string, refs []linkRef) {
+	for _, ref := range refs {
+		dest, _ := r.resolve(sourcePath, ref.dest)
+		switch l := ref.node.(type) {
+		case *ast.Link:
+			l.Destination = []byte(dest)
+		case *ast.Image:
+			l.Destination = []byte(dest)
+		}
+	}
 }

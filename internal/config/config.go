@@ -104,6 +104,7 @@ func Defaults() *Config {
 // must check the diagnostics for errors.
 func Load(path string, required bool) (*Config, []diag.Diagnostic) {
 	cfg := Defaults()
+	cfg.Root = filepath.Dir(path) // the project root, even if the file does not exist yet
 	file := filepath.ToSlash(filepath.Clean(path))
 
 	data, err := os.ReadFile(path)
@@ -119,7 +120,6 @@ func Load(path string, required bool) (*Config, []diag.Diagnostic) {
 		}}
 	}
 	cfg.Path = file
-	cfg.Root = filepath.Dir(path)
 
 	var doc yaml.Node
 	if err := yaml.Unmarshal(data, &doc); err != nil {

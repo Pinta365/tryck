@@ -35,7 +35,9 @@ type Ordered interface{ Priority() int }
 const DefaultPriority = 100
 
 // PageParser runs in stage 2, per page and in parallel, after the page's
-// Markdown is parsed. It may modify its own page only.
+// Markdown is parsed. It may modify its own page only, and must not
+// modify p.AST: tryck dev reuses parsed ASTs between builds. Change the
+// document with a MarkdownExtender (an AST transformer) instead.
 type PageParser interface {
 	OnPageParsed(p *Page) error
 }
@@ -115,7 +117,7 @@ type Page struct {
 	URL        string         // "/docs/setup/"
 	Front      FrontMatter    // typed front matter
 	Data       map[string]any // plugin-added values, e.g. "readingTime", "toc"
-	AST        ast.Node       // goldmark document; read-only after stage 2
+	AST        ast.Node       // goldmark document; read-only for plugins
 	Source     []byte         // body without front matter
 	BodyLine   int            // file line on which Source starts
 	HTML       []byte         // the rendered page, set in stage 4

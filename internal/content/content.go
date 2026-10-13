@@ -21,10 +21,11 @@ import (
 // embedded plugin.Page is the part plugins see.
 type Page struct {
 	plugin.Page
-	File    string // relative to project root, for diagnostics
-	OutPath string // relative to outputDir: "docs/setup/index.html"
-	Title   string // front matter title, first h1, or file name
-	HasH1   bool   // the body contains a level-1 heading
+	File    string   // relative to project root, for diagnostics
+	OutPath string   // relative to outputDir: "docs/setup/index.html"
+	Title   string   // front matter title, first h1, or file name
+	HasH1   bool     // the body contains a level-1 heading
+	Hash    [32]byte // SHA-256 of the source file
 }
 
 // Asset is a non-Markdown file inside contentDir, copied next to pages.

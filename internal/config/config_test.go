@@ -37,6 +37,9 @@ func TestLoadMissingFile(t *testing.T) {
 	if cfg.Path != "" || cfg.Build.OutputDir != "./dist" {
 		t.Errorf("optional missing file: got path %q outputDir %q", cfg.Path, cfg.Build.OutputDir)
 	}
+	if cfg.Root != filepath.Dir(path) {
+		t.Errorf("optional missing file: root = %q, want the config's directory %q", cfg.Root, filepath.Dir(path))
+	}
 
 	_, ds = Load(path, true)
 	if !diag.HasErrors(ds) || ds[0].Code != "config.read" {

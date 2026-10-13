@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ block "title" . }}{{ if and .Page.Title .Site.Title }}{{ .Page.Title }} · {{ .Site.Title }}{{ else }}{{ or .Page.Title .Site.Title }}{{ end }}{{ end }}</title>
+<title>{{ block "title" . }}{{ if and .Page.Title .Site.Title (ne .Page.Title .Site.Title) }}{{ .Page.Title }} · {{ .Site.Title }}{{ else }}{{ or .Page.Title .Site.Title }}{{ end }}{{ end }}</title>
 {{- with or .Page.Description .Site.Description }}
 <meta name="description" content="{{ . }}">
 {{- end }}
@@ -131,5 +131,40 @@ details.details > summary { cursor: pointer; font-weight: 600; }
   });
 })();
 </script>
+{{- if .Dev }}
+<script>
+// tryck dev: reload on rebuild, show build errors in an overlay.
+(() => {
+  let overlay;
+  function show(diags) {
+    overlay?.remove();
+    overlay = document.createElement("div");
+    overlay.setAttribute("role", "alert");
+    overlay.style.cssText = "position:fixed;inset:0;z-index:2147483647;overflow:auto;padding:2rem;background:rgba(13,17,23,.94);color:#f0f6fc;font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace";
+    const title = document.createElement("h2");
+    title.textContent = "Build failed";
+    title.style.cssText = "margin:0 0 1rem;color:#ff7b72;font:600 1.25rem system-ui,sans-serif";
+    const list = document.createElement("pre");
+    list.style.cssText = "margin:0;white-space:pre-wrap";
+    list.textContent = diags.map((d) => d.text).join("\n");
+    const hint = document.createElement("p");
+    hint.textContent = "Still showing the last good version. Fix the problem and save; this page reloads by itself.";
+    hint.style.cssText = "color:#9198a1;font-family:system-ui,sans-serif";
+    overlay.append(title, list, hint);
+    document.body.append(overlay);
+  }
+  function connect() {
+    const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/__tryck/ws");
+    ws.onmessage = (e) => {
+      const m = JSON.parse(e.data);
+      if (m.type === "reload") location.reload();
+      else if (m.type === "error") show(m.diagnostics || []);
+    };
+    ws.onclose = () => setTimeout(connect, 1000);
+  }
+  connect();
+})();
+</script>
+{{- end }}
 </body>
 </html>
