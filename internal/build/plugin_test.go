@@ -108,7 +108,7 @@ func TestPluginPhases(t *testing.T) {
 
 func TestTOCAndReadingTimeInTemplates(t *testing.T) {
 	site := mustBuild(t, writeSite(t, map[string]string{
-		"tryck.config.yaml":  "defaults:\n  tocDepth: [2, 2]\n",
+		"tryck.config.yaml":  "site:\n  baseUrl: https://example.com/\ndefaults:\n  tocDepth: [2, 2]\n",
 		"layouts/post.html":  `{{ define "main" }}{{ .Page.Data.readingTime }}min|{{ range .TOC }}{{ .ID }};{{ end }}{{ end }}`,
 		"content/p.md":       "---\nlayout: post\n---\n## One\n\n### Skipped\n\n## Two\n",
 		"content/no-toc.md":  "---\ntoc: false\n---\n## One\n",
@@ -127,7 +127,7 @@ func TestTOCAndReadingTimeInTemplates(t *testing.T) {
 
 func TestDisabledHighlighting(t *testing.T) {
 	site := mustBuild(t, writeSite(t, map[string]string{
-		"tryck.config.yaml": "plugins:\n  syntaxHighlighting:\n    enabled: false\n",
+		"tryck.config.yaml": "site:\n  baseUrl: https://example.com/\nplugins:\n  syntaxHighlighting:\n    enabled: false\n",
 		"content/a.md":      "```go\nx := 1\n```\n",
 	}))
 	a := string(site.Outputs["a/index.html"])
@@ -136,5 +136,119 @@ func TestDisabledHighlighting(t *testing.T) {
 	}
 	if _, ok := site.Outputs["css/chroma.css"]; ok {
 		t.Error("chroma.css written while disabled")
+	}
+}
+
+func TestLinkCheck(t *testing.T) {
+	files := map[string]string{
+		"tryck.config.yaml":        "site:\n  baseUrl: https://example.com/docs/\n",
+		"static/img/logo.png":      "png",
+		"content/index.md":         "# Home\n",
+		"content/guide/install.md": "# Install\n\n## Step two\n",
+		"content/guide/draft.md":   "---\ndraft: true\n---\n# Draft\n",
+		"content/guide/shot.png":   "png",
+		"content/guide/a.md": `# A
+
+[ok](install.md) [ok anchor](install.md#step-two) [own anchor](#a) ![static](/img/logo.png) ![asset](shot.png)
+[ok abs](https://example.com/docs/guide/install/) [external](https://other.example/x) [sitemap](/sitemap.xml)
+
+[typo](/guide/instal/)
+[missing md](../nope.md)
+[bad anchor](install.md#step-three)
+[bad own anchor](#nowhere)
+[draft](draft.md)
+![missing image](missing.png)
+[abs broken](https://example.com/docs/gone/)
+`,
+	}
+	cfg := writeSite(t, files)
+	site := mustBuild(t, cfg)
+	var got []string
+	for _, d := range site.Diags {
+		got = append(got, diag.Format(d))
+	}
+	want := []string{
+		"content/guide/a.md:6: error[link.broken]: /guide/instal/ does not exist (did you mean /guide/install/?)",
+		"content/guide/a.md:7: error[link.broken]: /nope/ does not exist",
+		"content/guide/a.md:8: warning[link.anchor]: #step-three not found on /guide/install/",
+		"content/guide/a.md:9: warning[link.anchor]: #nowhere not found on /guide/a/",
+		"content/guide/a.md:10: error[link.broken]: /guide/draft/ does not exist",
+		"content/guide/a.md:11: error[link.broken]: /guide/missing.png does not exist",
+		"content/guide/a.md:12: error[link.broken]: /gone/ does not exist",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("diagnostics:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+
+	cfg.Build.Drafts = true
+	site = mustBuild(t, cfg)
+	for _, d := range site.Diags {
+		if strings.Contains(d.Message, "/guide/draft/") {
+			t.Errorf("draft link reported although drafts are built: %s", diag.Format(d))
+		}
+	}
+
+	dev, err := build.Build(context.Background(), cfg, build.Options{Dev: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dev.HasErrors() {
+		t.Errorf("dev build: broken links must be warnings, got %v", dev.Diags)
+	}
+
+	files["tryck.config.yaml"] += "plugins:\n  linkCheck:\n    failOnBroken: false\n"
+	if site := mustBuild(t, writeSite(t, files)); site.HasErrors() {
+		t.Errorf("failOnBroken: false must not fail the build: %v", site.Diags)
+	}
+}
+
+func TestSiteOutputs(t *testing.T) {
+	site := mustBuild(t, writeSite(t, map[string]string{
+		"tryck.config.yaml": "site:\n  baseUrl: https://example.com/sub/\nplugins:\n  search:\n    maxTextLength: 12\n",
+		"content/index.md":  "---\ndate: 2026-10-13\n---\n# Home\n\nÅäö åäö åäö åäö\n",
+		"content/old.md":    "---\naliases: [/legacy/, /older.html, relative/]\n---\n# Old\n",
+		"content/draft.md":  "---\ndraft: true\n---\n# Draft\n",
+		"content/clash.md":  "---\naliases: [/old/]\n---\n# Clash\n",
+	}))
+	sitemap := string(site.Outputs["sitemap.xml"])
+	for _, want := range []string{"<loc>https://example.com/sub/</loc>\n    <lastmod>2026-10-13</lastmod>", "<loc>https://example.com/sub/old/</loc>"} {
+		if !strings.Contains(sitemap, want) {
+			t.Errorf("sitemap missing %q:\n%s", want, sitemap)
+		}
+	}
+	if strings.Contains(sitemap, "draft") {
+		t.Error("sitemap lists a draft")
+	}
+	if idx := string(site.Outputs["search-index.json"]); !strings.Contains(idx, `"url":"/sub/","title":"Home","headings":[],"text":"Home Åäö"}`) {
+		t.Errorf("search index: %s", idx)
+	}
+	for _, p := range []string{"legacy/index.html", "older.html"} {
+		if !strings.Contains(string(site.Outputs[p]), `url=/sub/old/`) {
+			t.Errorf("redirect %s: %s", p, site.Outputs[p])
+		}
+	}
+	var got []string
+	for _, d := range site.Diags {
+		got = append(got, diag.Format(d))
+	}
+	want := []string{
+		`error[redirect.alias]: alias /old/ of /clash/: output path "old/index.html" is already produced`,
+		`error[redirect.alias]: alias "relative/" of /old/ must start with /`,
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("diagnostics:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+func TestSitemapNeedsAbsoluteBaseURL(t *testing.T) {
+	site := mustBuild(t, writeSite(t, map[string]string{
+		"tryck.config.yaml": "site:\n  baseUrl: /\n",
+		"content/a.md":      "# A\n",
+	}))
+	if _, ok := site.Outputs["sitemap.xml"]; ok {
+		t.Error("sitemap written without absolute baseUrl")
+	}
+	if d, ok := findDiag(site.Diags, "sitemap.baseUrl"); !ok || d.Severity != diag.Warning {
+		t.Errorf("want sitemap.baseUrl warning, got %v", site.Diags)
 	}
 }

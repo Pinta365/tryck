@@ -129,19 +129,31 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	s.Assets = src.Assets
 	stage("load", "pages", len(src.Pages), "assets", len(src.Assets), "plugins", len(set.Plugins()))
 
-	// [2] Parse, in parallel. A page only touches its own Page.
+	// [2] Parse, in parallel. A page only touches its own Page. Front
+	// matter is read first so that link rewriting knows every page's URL.
 	workers := cfg.WorkerCount()
-	parsed := make([]*content.Page, len(src.Pages))
+	read := make([]*content.Page, len(src.Pages))
 	err = workpool.Run(ctx, len(src.Pages), workers, func(i int) {
-		parsed[i] = b.parse(contentDir, src.Pages[i])
+		read[i] = b.readPage(contentDir, src.Pages[i])
 	})
 	if err != nil {
 		return nil, err
 	}
-	for _, p := range parsed {
+	links := &linkResolver{baseURL: cfg.Site.BaseURL, pages: map[string]string{}, assets: map[string]string{}}
+	for _, p := range read {
 		if p != nil {
 			b.pages = append(b.pages, p)
+			links.pages[p.SourcePath] = p.URL
 		}
+	}
+	for _, a := range src.Assets {
+		links.assets[a.Rel] = a.OutPath
+	}
+	err = workpool.Run(ctx, len(b.pages), workers, func(i int) {
+		b.parsePage(b.pages[i], links)
+	})
+	if err != nil {
+		return nil, err
 	}
 	stage("parse", "workers", workers)
 
@@ -163,7 +175,12 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	for _, p := range s.Pages {
 		s.Anchors[p.URL] = anchors(p.AST)
 	}
-	b.view = newSiteView(s, b.site)
+	var static []string
+	staticDir := cfg.Dir(cfg.Build.StaticDir)
+	if err := content.WalkFiles(staticDir, func(_, rel string) { static = append(static, filepath.ToSlash(rel)) }); err != nil {
+		b.dc.Errorf(b.rel(staticDir), 0, 0, "content.read", "cannot read static files: %v", err)
+	}
+	b.view = newSiteView(s, b.site, static)
 	stage("index")
 
 	// [4] Render, in parallel.
@@ -190,7 +207,7 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 			b.dc.Errorf(b.rel(a.Src), 0, 0, "url.conflict", "%s would overwrite generated %s", b.rel(a.Src), a.OutPath)
 		}
 	}
-	out := &outputs{files: s.Outputs, assets: map[string]bool{}}
+	out := &outputs{files: s.Outputs, assets: map[string]bool{}, dc: &b.dc}
 	for _, a := range s.Assets {
 		out.assets[a.OutPath] = true
 	}
@@ -227,9 +244,9 @@ func (r reporter) Report(d plugin.Diagnostic) {
 	r.dc.Add(diag.Diagnostic{Severity: diag.Severity(d.Severity), File: r.file, Line: d.Line, Col: d.Col, Code: d.Code, Message: d.Message})
 }
 
-// parse reads one Markdown file. It returns nil for drafts that are
-// excluded and for files that cannot be read.
-func (b *builder) parse(contentDir, rel string) *content.Page {
+// readPage reads one Markdown file and its front matter. It returns nil
+// for drafts that are excluded and for files that cannot be read.
+func (b *builder) readPage(contentDir, rel string) *content.Page {
 	abs := filepath.Join(contentDir, filepath.FromSlash(rel))
 	file := b.rel(abs)
 	raw, err := os.ReadFile(abs)
@@ -256,7 +273,13 @@ func (b *builder) parse(contentDir, rel string) *content.Page {
 	p.Diags = reporter{&b.dc, file}
 	p.URL = content.URLFor(rel, front.Slug)
 	p.OutPath = content.OutputPath(p.URL)
+	return p
+}
 
+// parsePage parses the Markdown body, rewrites links and runs the
+// PageParser plugins.
+func (b *builder) parsePage(p *content.Page, links *linkResolver) {
+	file, body := p.File, p.Source
 	var issues []markdown.Issue
 	p.AST, issues = b.md.Parse(body)
 	for _, is := range issues {
@@ -268,14 +291,14 @@ func (b *builder) parse(contentDir, rel string) *content.Page {
 	}
 	h1 := content.FirstH1(p.AST, body)
 	p.HasH1 = h1 != ""
-	p.Title = cmp.Or(front.Title, h1, content.TitleFromPath(rel), b.cfg.Site.Title, "Home")
+	p.Title = cmp.Or(p.Front.Title, h1, content.TitleFromPath(p.SourcePath), b.cfg.Site.Title, "Home")
+	links.rewriteLinks(p)
 
 	for _, pp := range plugins.Each[plugin.PageParser](b.plugins) {
 		if err := pp.OnPageParsed(&p.Page); err != nil {
 			b.dc.Errorf(file, 0, 0, "plugin.error", "plugin %s: %v", pp.(plugin.Plugin).Name(), err)
 		}
 	}
-	return p
 }
 
 // anchors collects the element IDs of a document: heading IDs and
@@ -370,15 +393,21 @@ func pageInfo(p *content.Page) *plugin.PageInfo {
 		Draft:       p.Front.Draft,
 		Weight:      p.Front.Weight,
 		TitleInBody: p.HasH1,
+		Aliases:     p.Front.Aliases,
 		Params:      p.Front.Params,
 		Data:        maps.Clone(p.Data),
 	}
 }
 
-// outputs lets Finalizer plugins add files to the site.
+// outputs lets Finalizer plugins add files and site-wide diagnostics.
 type outputs struct {
 	files  map[string][]byte
 	assets map[string]bool
+	dc     *diag.Collector
+}
+
+func (o *outputs) Report(d plugin.Diagnostic) {
+	o.dc.Add(diag.Diagnostic{Severity: diag.Severity(d.Severity), Line: d.Line, Col: d.Col, Code: d.Code, Message: d.Message})
 }
 
 func (o *outputs) Add(p string, data []byte) error {

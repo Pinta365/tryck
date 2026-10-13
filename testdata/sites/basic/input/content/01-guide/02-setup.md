@@ -2,6 +2,7 @@
 title: "Setup & install"
 description: "How to <install> it."
 author: Anders
+aliases: [/install/, /old/setup.html]
 ---
 
 ## Requirements
@@ -24,3 +25,5 @@ fmt.Println("hi")
 ## Custom {#my-id}
 
 ![diagram](diagram.png) https://example.org
+
+Back to [home](../index.md) or the [custom heading](#my-id).

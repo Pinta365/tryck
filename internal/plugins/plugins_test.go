@@ -124,7 +124,12 @@ func TestHighlight(t *testing.T) {
 	}
 }
 
-type memOutputs struct{ files map[string][]byte }
+type memOutputs struct {
+	files map[string][]byte
+	diags []plugin.Diagnostic
+}
+
+func (m *memOutputs) Report(d plugin.Diagnostic) { m.diags = append(m.diags, d) }
 
 func (m *memOutputs) Add(p string, b []byte) error {
 	if m.files == nil {
@@ -163,7 +168,7 @@ func TestLoadOrderingAndConfig(t *testing.T) {
 	for _, p := range set.Plugins() {
 		names = append(names, p.Name())
 	}
-	if got := strings.Join(names, ","); got != "aa,zz,toc,syntaxHighlighting,late" {
+	if got := strings.Join(names, ","); got != "aa,zz,toc,redirects,search,sitemap,syntaxHighlighting,late,linkCheck" {
 		t.Errorf("order = %s", got)
 	}
 	var msgs []string
@@ -181,8 +186,8 @@ func TestLoadErrors(t *testing.T) {
 	cfg.Plugins["sitemap"]["enabled"] = "yes"
 	cfg.Plugins["syntaxHighlighting"]["theme"] = "nope"
 	set, ds := Load(cfg, plugin.SiteInfo{})
-	if !diag.HasErrors(ds) || len(ds) != 1 || ds[0].Code != "plugin.config" {
-		t.Errorf("want plugin.config error for the theme, got %v", ds)
+	if !diag.HasErrors(ds) || len(ds) != 2 || ds[0].Code != "plugin.config" || ds[1].Code != "config.invalid" {
+		t.Errorf("want plugin.config for the theme and config.invalid for enabled, got %v", ds)
 	}
 	for _, p := range set.Plugins() {
 		if p.Name() == "syntaxHighlighting" {

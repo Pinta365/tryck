@@ -170,6 +170,7 @@ type PageInfo struct {
 	Draft       bool
 	Weight      int
 	TitleInBody bool           // the body has its own h1, so layouts skip theirs
+	Aliases     []string       // old URLs that redirect here
 	Params      map[string]any // front matter keys tryck does not know
 	Data        map[string]any // plugin-added values as of the end of stage 2
 }
@@ -202,12 +203,18 @@ type SiteView interface {
 	PageByURL(url string) (*PageInfo, bool)
 	Nav() *NavNode
 	HasAnchor(url, id string) bool
+	// HasFile reports whether a site path ("/img/logo.png", "/docs/")
+	// is served: a page, a copied asset or static file, or a generated
+	// file added so far.
+	HasFile(sitePath string) bool
 	Config() SiteInfo
 }
 
-// Outputs collects extra output files.
+// Outputs collects extra output files and site-wide diagnostics.
 type Outputs interface {
 	// Add writes data to path, relative to outputDir ("sitemap.xml").
 	// It fails if the path is invalid or already produced.
 	Add(path string, data []byte) error
+	// Report records a diagnostic that is not about one page.
+	Report(d Diagnostic)
 }

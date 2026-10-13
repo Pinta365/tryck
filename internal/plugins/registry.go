@@ -22,6 +22,10 @@ func builtins(cfg *config.Config) []plugin.Plugin {
 		&TOC{Default: cfg.Defaults.TOC, MinLevel: cfg.Defaults.TOCDepth[0], MaxLevel: cfg.Defaults.TOCDepth[1]},
 		&ReadingTime{},
 		&Highlight{},
+		&LinkCheck{},
+		&Sitemap{},
+		&Search{},
+		&Redirects{},
 	}
 }
 

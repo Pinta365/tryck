@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,6 +22,13 @@ var update = flag.Bool("update", false, "rewrite golden files in testdata/sites/
 func writeSite(t *testing.T, files map[string]string) *config.Config {
 	t.Helper()
 	root := t.TempDir()
+	if _, ok := files[config.DefaultPath]; !ok {
+		files = maps.Clone(files)
+		if files == nil {
+			files = map[string]string{}
+		}
+		files[config.DefaultPath] = "site:\n  baseUrl: https://example.com/\n"
+	}
 	for name, body := range files {
 		p := filepath.Join(root, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
@@ -135,7 +143,7 @@ func TestDrafts(t *testing.T) {
 
 func TestTitleFallbacks(t *testing.T) {
 	site := mustBuild(t, writeSite(t, map[string]string{
-		"tryck.config.yaml":           "site:\n  title: My Site\n",
+		"tryck.config.yaml":           "site:\n  title: My Site\n  baseUrl: https://example.com/\n",
 		"content/index.md":            "No heading here.\n",
 		"content/fm.md":               "---\ntitle: From FM\n---\n# From H1\n",
 		"content/h1.md":               "Intro\n\n# From *H1*\n",

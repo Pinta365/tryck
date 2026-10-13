@@ -1,6 +1,8 @@
 package build
 
 import (
+	"strings"
+
 	"github.com/Pinta365/tryck/internal/nav"
 	"github.com/Pinta365/tryck/pkg/plugin"
 )
@@ -14,9 +16,11 @@ type siteView struct {
 	anchors    map[string]map[string]struct{}
 	site       plugin.SiteInfo
 	prev, next map[string]*plugin.PageInfo // nav order
+	copied     map[string]bool             // output paths of assets and static files
+	outputs    map[string][]byte           // generated files; only grows in stage 5
 }
 
-func newSiteView(s *Site, site plugin.SiteInfo) *siteView {
+func newSiteView(s *Site, site plugin.SiteInfo, staticFiles []string) *siteView {
 	v := &siteView{
 		info:    make(map[string]*plugin.PageInfo, len(s.Pages)),
 		nav:     s.Nav,
@@ -24,6 +28,14 @@ func newSiteView(s *Site, site plugin.SiteInfo) *siteView {
 		site:    site,
 		prev:    map[string]*plugin.PageInfo{},
 		next:    map[string]*plugin.PageInfo{},
+		copied:  map[string]bool{},
+		outputs: s.Outputs,
+	}
+	for _, a := range s.Assets {
+		v.copied[a.OutPath] = true
+	}
+	for _, f := range staticFiles {
+		v.copied[f] = true
 	}
 	for _, p := range s.Pages {
 		pi := pageInfo(p)
@@ -51,6 +63,20 @@ func (v *siteView) Config() plugin.SiteInfo { return v.site }
 func (v *siteView) HasAnchor(url, id string) bool {
 	_, ok := v.anchors[url][id]
 	return ok
+}
+
+func (v *siteView) HasFile(sitePath string) bool {
+	if _, ok := v.info[sitePath]; ok {
+		return true
+	}
+	rel := strings.TrimPrefix(sitePath, "/")
+	if strings.HasSuffix(rel, "/") || rel == "" {
+		rel += "index.html"
+	}
+	if _, ok := v.outputs[rel]; ok {
+		return true
+	}
+	return v.copied[rel]
 }
 
 var _ plugin.SiteView = (*siteView)(nil)

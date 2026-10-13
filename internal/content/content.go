@@ -30,6 +30,7 @@ type Page struct {
 // Asset is a non-Markdown file inside contentDir, copied next to pages.
 type Asset struct {
 	Src     string // absolute or root-relative path on disk
+	Rel     string // relative to contentDir, forward slashes
 	OutPath string // relative to outputDir
 }
 
@@ -67,11 +68,33 @@ func Discover(dir string) (Sources, error) {
 		if strings.EqualFold(path.Ext(rel), ".md") {
 			src.Pages = append(src.Pages, rel)
 		} else {
-			src.Assets = append(src.Assets, Asset{Src: p, OutPath: AssetPath(rel)})
+			src.Assets = append(src.Assets, Asset{Src: p, Rel: rel, OutPath: AssetPath(rel)})
 		}
 		return nil
 	})
 	return src, err
+}
+
+// WalkFiles calls fn for every regular file under root with its path
+// relative to root. A missing root yields nothing.
+func WalkFiles(root string, fn func(path, rel string)) error {
+	return filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			if p == root && os.IsNotExist(err) {
+				return fs.SkipAll
+			}
+			return err
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		rel, err := filepath.Rel(root, p)
+		if err != nil {
+			return err
+		}
+		fn(p, rel)
+		return nil
+	})
 }
 
 // FirstH1 returns the text of the first level-1 heading in doc, or "".

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -14,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/Pinta365/tryck/internal/build"
+	"github.com/Pinta365/tryck/internal/content"
 	"github.com/Pinta365/tryck/internal/workpool"
 )
 
@@ -47,7 +47,7 @@ func Write(site *build.Site) (Stats, error) {
 	// after, so they win over a copied file with the same path.
 	var copies []copyJob
 	static := cfg.Dir(cfg.Build.StaticDir)
-	if err := walkFiles(static, func(src, rel string) {
+	if err := content.WalkFiles(static, func(src, rel string) {
 		copies = append(copies, copyJob{src, filepath.Join(out, rel)})
 	}); err != nil {
 		return st, fmt.Errorf("copy static files: %w", err)
@@ -144,28 +144,6 @@ func clean(dir string) error {
 		}
 	}
 	return nil
-}
-
-// walkFiles calls fn for every regular file under root with its path
-// relative to root. A missing root yields nothing.
-func walkFiles(root string, fn func(path, rel string)) error {
-	return filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			if p == root && os.IsNotExist(err) {
-				return fs.SkipAll
-			}
-			return err
-		}
-		if !d.Type().IsRegular() {
-			return nil
-		}
-		rel, err := filepath.Rel(root, p)
-		if err != nil {
-			return err
-		}
-		fn(p, rel)
-		return nil
-	})
 }
 
 func copyFile(src, dst string) error {
