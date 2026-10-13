@@ -18,11 +18,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Pinta365/tryck"
 	"github.com/Pinta365/tryck/internal/build"
 	"github.com/Pinta365/tryck/internal/config"
 	"github.com/Pinta365/tryck/internal/devserver"
 	"github.com/Pinta365/tryck/internal/diag"
 	"github.com/Pinta365/tryck/internal/output"
+	"github.com/Pinta365/tryck/internal/scaffold"
 )
 
 // version is set at release time with -ldflags "-X main.version=v0.1.0".
@@ -301,7 +303,20 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 	if code, ok := parseFlags(fs, args, 1, stderr); !ok {
 		return code
 	}
-	fmt.Fprintln(stderr, "tryck init: not implemented yet")
+	dir := "."
+	if fs.NArg() == 1 {
+		dir = fs.Arg(0)
+	}
+	files, err := scaffold.Init(dir, tryck.Starter())
+	if err != nil {
+		fmt.Fprintf(stderr, "tryck init: %v\n", err)
+		return exitBuild
+	}
+	fmt.Fprintf(stdout, "Created %d files in %s\n\nNext:\n", len(files), dir)
+	if dir != "." {
+		fmt.Fprintf(stdout, "  cd %s\n", dir)
+	}
+	fmt.Fprintln(stdout, "  tryck dev")
 	return exitOK
 }
 

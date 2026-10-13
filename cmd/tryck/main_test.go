@@ -82,7 +82,8 @@ func TestRun(t *testing.T) {
 		},
 		{name: "dev bad config", config: "site:\n  baseUrl: [\n", args: []string{"dev"}, wantCode: 2, wantStderr: "error[config.yaml]"},
 		{name: "dev bad port", args: []string{"dev", "--port", "0"}, wantCode: 2, wantStderr: "invalid port"},
-		{name: "init with dir", args: []string{"init", "mysite"}, wantCode: 0, wantStderr: "not implemented"},
+		{name: "init with dir", args: []string{"init", "mysite"}, wantCode: 0, wantStdout: "cd mysite\n  tryck dev"},
+		{name: "init over existing site", config: "site:\n  title: x\n", args: []string{"init"}, wantCode: 1, wantStderr: "already contains tryck.config.yaml"},
 		{name: "init too many args", args: []string{"init", "a", "b"}, wantCode: 2, wantStderr: `unexpected argument "b"`},
 	}
 	for _, tt := range tests {

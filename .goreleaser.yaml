@@ -1,0 +1,43 @@
+# Release with: git tag vX.Y.Z && git push --tags (see .github/workflows/release.yml).
+# Archive names have no version, so deploy pipelines can use
+# releases/download/<tag>/tryck_linux_amd64.tar.gz (spec §13).
+version: 2
+project_name: tryck
+
+builds:
+  - main: ./cmd/tryck
+    binary: tryck
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Tag }}
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ignore:
+      - goos: darwin
+        goarch: amd64
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - name_template: "tryck_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github
+  sort: asc
+
+release:
+  github:
+    owner: Pinta365
+    name: tryck

@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        go: ["1.23", stable] # the go.mod minimum and the latest release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ matrix.go }}
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+      - run: go vet ./...
+      - run: go test -race ./...
+      - run: CGO_ENABLED=0 go build ./cmd/tryck
+      - name: Benchmark (1,000 pages)
+        run: go test -run '^$' -bench Build1000Pages -benchtime 3x ./internal/build

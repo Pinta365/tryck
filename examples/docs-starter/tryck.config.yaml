@@ -1,0 +1,23 @@
+site:
+  title: "My Docs"
+  description: "Documentation built with tryck."
+  # Production URL. CI overrides it with --base-url, e.g. for GitHub Pages
+  # project sites (https://<user>.github.io/<repo>/) or preview deploys.
+  baseUrl: "https://example.com/"
+  language: "en"
+
+build:
+  contentDir: "./content"
+  outputDir: "./dist"
+  staticDir: "./static"
+  layoutsDir: "./layouts" # optional; files here override the built-in layouts
+
+defaults:
+  layout: "doc"
+  toc: true
+  tocDepth: [2, 3]
+
+plugins:
+  syntaxHighlighting:
+    theme: "nord"
+    lineNumbers: false
