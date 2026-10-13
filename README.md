@@ -133,3 +133,7 @@ go test -race ./...                      # all tests
 TRYCK_UPDATE=1 go test ./internal/build  # accept new golden output in testdata/sites/*/expected
 go test -run '^$' -bench . ./internal/build
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
