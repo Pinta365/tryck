@@ -1,6 +1,7 @@
 package content
 
 import (
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -121,6 +122,14 @@ func TestStripNumericPrefix(t *testing.T) {
 	for in, want := range map[string]string{"01-intro": "intro", "intro": "intro", "10-": "10-", "1a-x": "1a-x", "001-a-b": "a-b"} {
 		if got := StripNumericPrefix(in); got != want {
 			t.Errorf("StripNumericPrefix(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestNumericPrefix(t *testing.T) {
+	for in, want := range map[string]int{"01-intro": 1, "120-x": 120, "intro": -1, "10-": -1, "2026-10-13-post": -1, "99999999999999999999-x": math.MaxInt32} {
+		if got := NumericPrefix(in); got != want {
+			t.Errorf("NumericPrefix(%q) = %d, want %d", in, got, want)
 		}
 	}
 }

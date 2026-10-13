@@ -256,3 +256,53 @@ func compareTrees(t *testing.T, wantDir, gotDir string) {
 		}
 	}
 }
+
+func TestNavAndPrevNext(t *testing.T) {
+	site := mustBuild(t, writeSite(t, map[string]string{
+		"content/index.md":           "# Home\n",
+		"content/02-b.md":            "# B\n",
+		"content/01-guide/_index.md": "---\ntitle: Guide\n---\n",
+		"content/01-guide/01-a.md":   "---\nnavTitle: Short A\n---\n# A long title\n",
+	}))
+	if len(site.Diags) != 0 {
+		t.Fatalf("diagnostics %v", site.Diags)
+	}
+	a := string(site.Outputs["guide/a/index.html"])
+	for _, want := range []string{
+		`<a class="pager-prev" rel="prev" href="/guide/"><span>Previous</span>Guide</a>`,
+		`<a class="pager-next" rel="next" href="/b/"><span>Next</span>B</a>`,
+		`<a href="/guide/a/" aria-current="page">Short A</a>`,
+		`<li class="in-path"><a href="/guide/">Guide</a>`,
+		`<title>A long title</title>`,
+	} {
+		if !strings.Contains(a, want) {
+			t.Errorf("guide/a missing %q:\n%s", want, a)
+		}
+	}
+	home := string(site.Outputs["index.html"])
+	if strings.Contains(home, `rel="prev"`) || !strings.Contains(home, `rel="next" href="/guide/"`) {
+		t.Errorf("home pager wrong:\n%s", home)
+	}
+	if b := string(site.Outputs["b/index.html"]); strings.Contains(b, `rel="next"`) {
+		t.Error("last page has a next link")
+	}
+}
+
+func TestDraftBanner(t *testing.T) {
+	cfg := writeSite(t, map[string]string{"content/d.md": "---\ndraft: true\n---\n# D\n"})
+	cfg.Build.Drafts = true
+	site := mustBuild(t, cfg)
+	if !strings.Contains(string(site.Outputs["d/index.html"]), `class="draft-banner"`) {
+		t.Error("draft page has no banner")
+	}
+}
+
+func TestDuplicateHeadingDiag(t *testing.T) {
+	site := mustBuild(t, writeSite(t, map[string]string{
+		"content/a.md": "---\ntitle: A\n---\n\n## Setup\n\ntext\n\n## Setup\n",
+	}))
+	d, ok := findDiag(site.Diags, "heading.duplicateId")
+	if !ok || d.Severity != diag.Info || d.File != "content/a.md" || d.Line != 9 || !strings.Contains(d.Message, `"setup-1"`) {
+		t.Errorf("want info at content/a.md:9 about setup-1, got %v", site.Diags)
+	}
+}

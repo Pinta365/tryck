@@ -3,6 +3,7 @@ package render
 
 import (
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"slices"
 	"strconv"
@@ -19,6 +21,8 @@ import (
 	"time"
 
 	"github.com/Pinta365/tryck/internal/diag"
+	"github.com/Pinta365/tryck/internal/markdown"
+	"github.com/Pinta365/tryck/internal/nav"
 )
 
 //go:embed layouts
@@ -32,22 +36,28 @@ type SiteInfo struct {
 	Language    string
 }
 
-// PageInfo is the per-page data available to templates.
+// PageInfo is the per-page data available to templates. It is a copy;
+// templates cannot reach mutable build state through it.
 type PageInfo struct {
 	Title       string
+	NavTitle    string
 	Description string
 	URL         string
 	Date        time.Time
 	Draft       bool
-	Params      map[string]any
+	Weight      int
+	TitleInBody bool           // the body has its own h1, so layouts skip theirs
+	Params      map[string]any // front matter keys tryck does not know
 }
 
 // TemplateData is the dot value of every layout (spec §9.2).
 type TemplateData struct {
-	Site    SiteInfo
-	Page    *PageInfo
-	Content template.HTML // rendered body, already trusted
-	Dev     bool
+	Site       SiteInfo
+	Page       *PageInfo
+	Content    template.HTML // rendered body, already trusted
+	Nav        *nav.Node     // full tree with Active/InPath set for this page
+	Prev, Next *PageInfo     // nil at the ends
+	Dev        bool          // true in tryck dev
 }
 
 // ErrMissingLayout is returned by Execute for an unknown layout name.
@@ -142,6 +152,7 @@ func Load(userDir, label string, funcs template.FuncMap) (*Templates, []diag.Dia
 			dc.Add(parseDiag(f, err))
 			continue
 		}
+		set.Funcs(template.FuncMap{"partial": partialFunc(set)})
 		if _, err := set.New(n).Parse(f.content); err != nil {
 			dc.Add(parseDiag(f, err))
 			continue
@@ -188,12 +199,102 @@ func (t *Templates) Execute(w io.Writer, layout string, data *TemplateData) erro
 	return tmpl.Execute(w, data)
 }
 
-// Funcs returns the template functions for a site with the given baseUrl.
-func Funcs(baseURL string) template.FuncMap {
+// FuncOptions configures the template functions of a site.
+type FuncOptions struct {
+	BaseURL     string
+	DateFormat  string                       // default layout for dateFormat
+	Markdownify func(string) (string, error) // inline Markdown to HTML
+}
+
+// Funcs returns the template functions (spec §9.3). "partial" is bound
+// to each layout's template set by Load.
+func Funcs(o FuncOptions) template.FuncMap {
 	return template.FuncMap{
-		"relURL": func(p string) string { return RelURL(baseURL, p) },
-		"absURL": func(p string) string { return AbsURL(baseURL, p) },
+		"relURL": func(p string) string { return RelURL(o.BaseURL, p) },
+		"absURL": func(p string) string { return AbsURL(o.BaseURL, p) },
+		"dateFormat": func(layout string, t time.Time) string {
+			if t.IsZero() {
+				return ""
+			}
+			if layout == "" {
+				layout = o.DateFormat
+			}
+			return t.Format(layout)
+		},
+		"markdownify": func(s string) (template.HTML, error) {
+			if o.Markdownify == nil {
+				return template.HTML(template.HTMLEscapeString(s)), nil
+			}
+			html, err := o.Markdownify(s)
+			return template.HTML(html), err // rendered by goldmark, raw HTML stripped unless unsafeHTML
+		},
+		"slugify": markdown.Slugify,
+		"default": func(def, val any) any {
+			if isZero(val) {
+				return def
+			}
+			return val
+		},
+		"dict": func(kv ...any) (map[string]any, error) {
+			if len(kv)%2 != 0 {
+				return nil, errors.New("dict needs key/value pairs")
+			}
+			m := make(map[string]any, len(kv)/2)
+			for i := 0; i < len(kv); i += 2 {
+				k, ok := kv[i].(string)
+				if !ok {
+					return nil, fmt.Errorf("dict key %v is not a string", kv[i])
+				}
+				m[k] = kv[i+1]
+			}
+			return m, nil
+		},
+		"jsonify": func(v any) (template.HTML, error) {
+			b, err := json.Marshal(v) // escapes <, > and &, so safe in HTML
+			return template.HTML(b), err
+		},
+		"partial": func(string, ...any) (template.HTML, error) {
+			return "", errors.New("partial is not bound to a template set")
+		},
 	}
+}
+
+// partialFunc executes "partials/<name>.html" from set. The data
+// argument is optional; without it the partial gets nil.
+func partialFunc(set *template.Template) func(string, ...any) (template.HTML, error) {
+	return func(name string, data ...any) (template.HTML, error) {
+		if len(data) > 1 {
+			return "", fmt.Errorf("partial %q: takes at most one data argument", name)
+		}
+		if !strings.HasSuffix(name, ".html") {
+			name += ".html"
+		}
+		t := set.Lookup("partials/" + name)
+		if t == nil {
+			return "", fmt.Errorf("partial %q not found in partials/", name)
+		}
+		var arg any
+		if len(data) == 1 {
+			arg = data[0]
+		}
+		var buf strings.Builder
+		if err := t.Execute(&buf, arg); err != nil {
+			return "", err
+		}
+		return template.HTML(buf.String()), nil // output of an html/template, already escaped
+	}
+}
+
+func isZero(v any) bool {
+	if v == nil {
+		return true
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Map, reflect.Slice, reflect.Array, reflect.String:
+		return rv.Len() == 0
+	}
+	return rv.IsZero()
 }
 
 // RelURL prefixes a site path with the path part of baseURL, so sites

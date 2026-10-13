@@ -1,5 +1,23 @@
 {{ define "main" }}
+<div class="layout">
+{{ partial "sidebar" . }}
+<main class="content">
 <article class="doc">
+{{- if not .Page.TitleInBody }}
+<h1>{{ .Page.Title }}</h1>
+{{- end }}
 {{ .Content }}
 </article>
+{{- if or .Prev .Next }}
+<nav class="pager" aria-label="Previous and next page">
+{{- with .Prev }}
+<a class="pager-prev" rel="prev" href="{{ relURL .URL }}"><span>Previous</span>{{ or .NavTitle .Title }}</a>
+{{- end }}
+{{- with .Next }}
+<a class="pager-next" rel="next" href="{{ relURL .URL }}"><span>Next</span>{{ or .NavTitle .Title }}</a>
+{{- end }}
+</nav>
+{{- end }}
+</main>
+</div>
 {{ end }}

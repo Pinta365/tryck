@@ -6,33 +6,64 @@
 <title>Guide · Basic Docs</title>
 <meta name="description" content="Golden test fixture.">
 <style>
-:root { --fg: #1f2328; --muted: #59636e; --bg: #fff; --line: #d1d9e0; --link: #0969da; --code-bg: #f6f8fa; }
+:root { --fg: #1f2328; --muted: #59636e; --bg: #fff; --bg-alt: #f6f8fa; --line: #d1d9e0; --link: #0969da; --warn-bg: #fff8c5; --warn-line: #d4a72c; }
 @media (prefers-color-scheme: dark) {
-  :root { --fg: #e6edf3; --muted: #9198a1; --bg: #0d1117; --line: #3d444d; --link: #4493f8; --code-bg: #151b23; }
+  :root { --fg: #e6edf3; --muted: #9198a1; --bg: #0d1117; --bg-alt: #151b23; --line: #3d444d; --link: #4493f8; --warn-bg: #3b2e00; --warn-line: #9e6a03; }
 }
 * { box-sizing: border-box; }
 body { margin: 0; color: var(--fg); background: var(--bg); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
 a { color: var(--link); }
 .site-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--line); }
-.site-header a { color: var(--fg); font-weight: 600; text-decoration: none; }
-main { max-width: 48rem; margin: 0 auto; padding: 1rem; }
+.site-title { color: var(--fg); font-weight: 600; text-decoration: none; }
+.draft-banner { padding: 0.5rem 1rem; background: var(--warn-bg); border-bottom: 1px solid var(--warn-line); font-weight: 600; }
+.layout { display: flex; flex-wrap: wrap; max-width: 76rem; margin: 0 auto; }
+.sidebar { flex: 0 0 16rem; padding: 1rem; font-size: 0.95rem; }
+.sidebar ul { list-style: none; margin: 0; padding-left: 0.9rem; }
+.sidebar > ul { padding-left: 0; }
+.sidebar li { margin: 0.2rem 0; }
+.sidebar a { color: var(--fg); text-decoration: none; }
+.sidebar a:hover { color: var(--link); }
+.sidebar a[aria-current="page"] { color: var(--link); font-weight: 600; }
+.nav-section { color: var(--muted); font-weight: 600; }
+.content { flex: 1 1 32rem; min-width: 0; max-width: 48rem; margin: 0 auto; padding: 1rem; }
+.post-date { color: var(--muted); }
+.pager { display: flex; gap: 1rem; justify-content: space-between; margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.pager a { display: flex; flex-direction: column; text-decoration: none; }
+.pager span { color: var(--muted); font-size: 0.85rem; }
+.pager-next { margin-left: auto; text-align: right; }
 pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
-pre { padding: 1rem; overflow-x: auto; background: var(--code-bg); border-radius: 6px; }
-:not(pre) > code { padding: 0.1em 0.3em; background: var(--code-bg); border-radius: 4px; }
-table { border-collapse: collapse; }
+pre { padding: 1rem; overflow-x: auto; background: var(--bg-alt); border-radius: 6px; }
+:not(pre) > code { padding: 0.1em 0.3em; background: var(--bg-alt); border-radius: 4px; }
+table { border-collapse: collapse; display: block; overflow-x: auto; }
 th, td { padding: 0.4rem 0.75rem; border: 1px solid var(--line); }
 img { max-width: 100%; }
+@media (max-width: 50rem) { .sidebar { flex-basis: 100%; border-bottom: 1px solid var(--line); } }
 </style>
 </head>
 <body>
-<header class="site-header"><a href="/basic/">Basic Docs</a></header>
-<main>
+<header class="site-header"><a class="site-title" href="/basic/">Basic Docs</a></header>
 
+
+<div class="layout">
+<nav class="sidebar" aria-label="Site"><ul>
+<li class="in-path"><a href="/basic/guide/" aria-current="page">Guide</a><ul>
+<li><a href="/basic/guide/setup/">Setup &amp; install</a></li>
+</ul></li>
+</ul>
+</nav>
+
+<main class="content">
 <article class="doc">
+<h1>Guide</h1>
 <p>The guide section index.</p>
 
 </article>
-
+<nav class="pager" aria-label="Previous and next page">
+<a class="pager-prev" rel="prev" href="/basic/"><span>Previous</span>Welcome to Basic</a>
+<a class="pager-next" rel="next" href="/basic/guide/setup/"><span>Next</span>Setup &amp; install</a>
+</nav>
 </main>
+</div>
+
 </body>
 </html>

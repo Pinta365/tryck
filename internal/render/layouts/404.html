@@ -1,5 +1,7 @@
 {{ define "title" }}Page not found{{ with .Site.Title }} · {{ . }}{{ end }}{{ end }}
 {{ define "main" }}
+<main class="content">
 <h1>Page not found</h1>
 <p>The page you are looking for does not exist. <a href="{{ relURL "/" }}">Go to the home page</a>.</p>
+</main>
 {{ end }}

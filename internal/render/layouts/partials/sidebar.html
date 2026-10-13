@@ -1,0 +1,13 @@
+{{- define "tryck-nav" -}}
+<ul>
+{{- range . }}
+<li{{ if .InPath }} class="in-path"{{ end }}>
+{{- if .URL }}<a href="{{ relURL .URL }}"{{ if .Active }} aria-current="page"{{ end }}>{{ .Title }}</a>{{ else }}<span class="nav-section">{{ .Title }}</span>{{ end }}
+{{- with .Children }}{{ template "tryck-nav" . }}{{ end -}}
+</li>
+{{- end }}
+</ul>
+{{- end -}}
+<nav class="sidebar" aria-label="Site">
+{{- with .Nav }}{{ with .Children }}{{ template "tryck-nav" . }}{{ end }}{{ end }}
+</nav>

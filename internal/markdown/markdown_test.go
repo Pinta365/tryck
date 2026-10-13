@@ -7,7 +7,8 @@ import (
 
 func render(t *testing.T, p *Processor, src string) string {
 	t.Helper()
-	out, err := p.Render(p.Parse([]byte(src)), []byte(src))
+	doc, _ := p.Parse([]byte(src))
+	out, err := p.Render(doc, []byte(src))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,6 +39,45 @@ func TestGFM(t *testing.T) {
 	for _, want := range []string{"<table>", "<del>x</del>", `<a href="https://example.org">`, `type="checkbox"`} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %s in:\n%s", want, out)
+		}
+	}
+}
+
+func TestSuffixedIDs(t *testing.T) {
+	_, suffixed := New(Options{}).Parse([]byte("## A\n\n## Step 1\n\n## A\n\n## a\n"))
+	if strings.Join(suffixed, ",") != "a-1,a-2" {
+		t.Errorf("suffixed = %v", suffixed)
+	}
+}
+
+func TestSlugify(t *testing.T) {
+	for in, want := range map[string]string{
+		"Setup & Install":        "setup-install",
+		"  Hello,   World!  ":    "hello-world",
+		"Översikt 2.0":           "översikt-20",
+		"snake_case--and--dash":  "snake-case-and-dash",
+		"C++":                    "c",
+		"!!!":                    "",
+		"The `tryck` *engine*":   "the-tryck-engine",
+		"-leading and trailing-": "leading-and-trailing",
+	} {
+		if got := Slugify(in); got != want {
+			t.Errorf("Slugify(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestRenderInline(t *testing.T) {
+	p := New(Options{})
+	for in, want := range map[string]string{
+		"Some *emphasis* & `code`": "Some <em>emphasis</em> &amp; <code>code</code>",
+		"":                         "",
+		"para one\n\npara two":     "<p>para one</p>\n<p>para two</p>",
+		"<b>raw</b>":               "<!-- raw HTML omitted -->raw<!-- raw HTML omitted -->",
+	} {
+		got, err := p.RenderInline(in)
+		if err != nil || got != want {
+			t.Errorf("RenderInline(%q) = %q, %v; want %q", in, got, err, want)
 		}
 	}
 }

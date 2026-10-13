@@ -1,0 +1,13 @@
+{{ define "main" }}
+<main class="content">
+<article class="post">
+{{- if not .Page.TitleInBody }}
+<h1>{{ .Page.Title }}</h1>
+{{- end }}
+{{- with dateFormat "" .Page.Date }}
+<p class="post-date"><time datetime="{{ dateFormat "2006-01-02" $.Page.Date }}">{{ . }}</time></p>
+{{- end }}
+{{ .Content }}
+</article>
+</main>
+{{ end }}

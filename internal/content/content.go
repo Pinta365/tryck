@@ -23,10 +23,17 @@ type Page struct {
 	OutPath    string // relative to outputDir: "docs/setup/index.html"
 	Front      FrontMatter
 	Title      string // front matter title, first h1, or file name
+	HasH1      bool   // the body contains a level-1 heading
 	Source     []byte // body without front matter
 	BodyLine   int    // file line of the first body line
 	AST        ast.Node
 	HTML       []byte // rendered body fragment
+}
+
+// LineAt converts a byte offset in Source to a 1-based file line.
+func (p *Page) LineAt(offset int) int {
+	offset = min(offset, len(p.Source))
+	return p.BodyLine + bytes.Count(p.Source[:offset], []byte("\n"))
 }
 
 // Asset is a non-Markdown file inside contentDir, copied next to pages.

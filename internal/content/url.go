@@ -1,8 +1,10 @@
 package content
 
 import (
+	"math"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -22,6 +24,19 @@ func StripNumericPrefix(seg string) string {
 		return seg[len(m):]
 	}
 	return seg
+}
+
+// NumericPrefix returns the ordering prefix of a path segment ("02-setup"
+// -> 2), or -1 if StripNumericPrefix would not remove one.
+func NumericPrefix(seg string) int {
+	if StripNumericPrefix(seg) == seg {
+		return -1
+	}
+	n, err := strconv.Atoi(numericPrefixRE.FindStringSubmatch(seg)[1])
+	if err != nil {
+		return math.MaxInt32
+	}
+	return n
 }
 
 // IsSectionIndex reports whether a content file is a section index page

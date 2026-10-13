@@ -8,6 +8,7 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"github.com/yuin/goldmark/ast"
 	"html/template"
 	"os"
 	"path"
@@ -20,6 +21,7 @@ import (
 	"github.com/Pinta365/tryck/internal/content"
 	"github.com/Pinta365/tryck/internal/diag"
 	"github.com/Pinta365/tryck/internal/markdown"
+	"github.com/Pinta365/tryck/internal/nav"
 	"github.com/Pinta365/tryck/internal/render"
 )
 
@@ -32,6 +34,7 @@ type Site struct {
 	Config  *config.Config
 	Pages   []*content.Page // sorted by URL
 	ByURL   map[string]*content.Page
+	Nav     *nav.Node         // read-only after stage 3
 	Assets  []content.Asset   // files from contentDir copied next to pages
 	Outputs map[string][]byte // output path -> bytes (pages + generated files)
 	Diags   []diag.Diagnostic // sorted
@@ -54,6 +57,8 @@ type builder struct {
 	tmpl  *render.Templates
 	site  render.SiteInfo
 	pages []*content.Page
+	// prev and next page of each URL in nav order
+	prev, next map[string]*content.Page
 }
 
 // Build runs the pipeline. It always returns a Site; check HasErrors.
@@ -73,7 +78,12 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	s := &Site{Config: cfg, ByURL: map[string]*content.Page{}, Outputs: map[string][]byte{}}
 
 	// [1] Load
-	tmpl, ds := render.Load(cfg.Dir(cfg.Build.LayoutsDir), b.rel(cfg.Dir(cfg.Build.LayoutsDir)), render.Funcs(cfg.Site.BaseURL))
+	funcs := render.Funcs(render.FuncOptions{
+		BaseURL:     cfg.Site.BaseURL,
+		DateFormat:  cfg.Defaults.DateFormat,
+		Markdownify: b.md.RenderInline,
+	})
+	tmpl, ds := render.Load(cfg.Dir(cfg.Build.LayoutsDir), b.rel(cfg.Dir(cfg.Build.LayoutsDir)), funcs)
 	b.dc.Add(ds...)
 	b.tmpl = tmpl
 
@@ -104,13 +114,20 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 		s.ByURL[p.URL] = p
 		s.Pages = append(s.Pages, p)
 	}
+	s.Nav = nav.Build(s.Pages, cfg.Site.Title)
+	b.prev, b.next = map[string]*content.Page{}, map[string]*content.Page{}
+	order := nav.Walk(s.Nav)
+	for i := 1; i < len(order); i++ {
+		b.prev[order[i]] = s.ByURL[order[i-1]]
+		b.next[order[i-1]] = s.ByURL[order[i]]
+	}
 
 	// [4] Render
 	for _, p := range s.Pages {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		if out, ok := b.render(p); ok {
+		if out, ok := b.render(s, p); ok {
 			s.Outputs[p.OutPath] = out
 		}
 	}
@@ -165,12 +182,44 @@ func (b *builder) parse(contentDir, rel string) *content.Page {
 	}
 	p.URL = content.URLFor(rel, front.Slug)
 	p.OutPath = content.OutputPath(p.URL)
-	p.AST = b.md.Parse(body)
-	p.Title = cmp.Or(front.Title, content.FirstH1(p.AST, body), content.TitleFromPath(rel), b.cfg.Site.Title, "Home")
+	var suffixed []string
+	p.AST, suffixed = b.md.Parse(body)
+	b.reportSuffixedIDs(p, suffixed)
+	h1 := content.FirstH1(p.AST, body)
+	p.HasH1 = h1 != ""
+	p.Title = cmp.Or(front.Title, h1, content.TitleFromPath(rel), b.cfg.Site.Title, "Home")
 	return p
 }
 
-func (b *builder) render(p *content.Page) ([]byte, bool) {
+// reportSuffixedIDs adds heading.duplicateId info diagnostics.
+func (b *builder) reportSuffixedIDs(p *content.Page, ids []string) {
+	if len(ids) == 0 {
+		return
+	}
+	want := map[string]bool{}
+	for _, id := range ids {
+		want[id] = true
+	}
+	_ = ast.Walk(p.AST, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		h, ok := n.(*ast.Heading)
+		if !ok || !entering {
+			return ast.WalkContinue, nil
+		}
+		if v, ok := h.AttributeString("id"); ok {
+			if id, _ := v.([]byte); want[string(id)] {
+				line := 0
+				if h.Lines().Len() > 0 {
+					line = p.LineAt(h.Lines().At(0).Start)
+				}
+				b.dc.Infof(p.File, line, 0, "heading.duplicateId",
+					"heading ID %q needed a suffix to be unique; add {#id} to choose one", id)
+			}
+		}
+		return ast.WalkSkipChildren, nil
+	})
+}
+
+func (b *builder) render(s *Site, p *content.Page) ([]byte, bool) {
 	html, err := b.md.Render(p.AST, p.Source)
 	if err != nil {
 		b.dc.Errorf(p.File, 0, 0, "markdown.render", "%v", err)
@@ -188,6 +237,9 @@ func (b *builder) render(p *content.Page) ([]byte, bool) {
 		Site:    b.site,
 		Page:    pageInfo(p),
 		Content: template.HTML(html), // trusted: rendered by goldmark (spec §9.4)
+		Nav:     nav.ForPage(s.Nav, p.URL),
+		Prev:    pageInfo(b.prev[p.URL]),
+		Next:    pageInfo(b.next[p.URL]),
 		Dev:     b.opts.Dev,
 	}
 	var buf bytes.Buffer
@@ -202,7 +254,8 @@ func (b *builder) render(p *content.Page) ([]byte, bool) {
 func (b *builder) renderNotFound(s *Site) {
 	data := &render.TemplateData{
 		Site: b.site,
-		Page: &render.PageInfo{Title: "Page not found", URL: "/" + NotFoundPath},
+		Page: &render.PageInfo{Title: "Page not found", URL: "/" + NotFoundPath, TitleInBody: true},
+		Nav:  s.Nav,
 		Dev:  b.opts.Dev,
 	}
 	var buf bytes.Buffer
@@ -219,13 +272,20 @@ func (b *builder) renderNotFound(s *Site) {
 	s.Outputs[NotFoundPath] = buf.Bytes()
 }
 
+// pageInfo copies the template-visible fields of p. It returns nil for nil.
 func pageInfo(p *content.Page) *render.PageInfo {
+	if p == nil {
+		return nil
+	}
 	return &render.PageInfo{
 		Title:       p.Title,
+		NavTitle:    p.Front.NavTitle,
 		Description: p.Front.Description,
 		URL:         p.URL,
 		Date:        p.Front.Date,
 		Draft:       p.Front.Draft,
+		Weight:      p.Front.Weight,
+		TitleInBody: p.HasH1,
 		Params:      p.Front.Params,
 	}
 }
