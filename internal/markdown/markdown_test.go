@@ -1,6 +1,7 @@
 package markdown
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -44,9 +45,18 @@ func TestGFM(t *testing.T) {
 }
 
 func TestSuffixedIDs(t *testing.T) {
-	_, suffixed := New(Options{}).Parse([]byte("## A\n\n## Step 1\n\n## A\n\n## a\n"))
-	if strings.Join(suffixed, ",") != "a-1,a-2" {
-		t.Errorf("suffixed = %v", suffixed)
+	src := "## A\n\n## Step 1\n\n## A\n\n## a\n"
+	_, issues := New(Options{}).Parse([]byte(src))
+	var got []string
+	for _, is := range issues {
+		got = append(got, fmt.Sprintf("%d:%s", strings.Count(src[:is.Offset], "\n")+1, is.Message))
+	}
+	want := []string{
+		`5:heading ID "a-1" needed a suffix to be unique; add {#id} to choose one`,
+		`7:heading ID "a-2" needed a suffix to be unique; add {#id} to choose one`,
+	}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Errorf("got %q", got)
 	}
 }
 

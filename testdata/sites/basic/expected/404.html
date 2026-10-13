@@ -6,9 +6,15 @@
 <title>Page not found · Basic Docs</title>
 <meta name="description" content="Golden test fixture.">
 <style>
-:root { --fg: #1f2328; --muted: #59636e; --bg: #fff; --bg-alt: #f6f8fa; --line: #d1d9e0; --link: #0969da; --warn-bg: #fff8c5; --warn-line: #d4a72c; }
+:root {
+  --fg: #1f2328; --muted: #59636e; --bg: #fff; --bg-alt: #f6f8fa; --line: #d1d9e0; --link: #0969da; --warn-bg: #fff8c5; --warn-line: #d4a72c;
+  --note: #0969da; --tip: #1a7f37; --info: #8250df; --warning: #9a6700; --danger: #cf222e;
+}
 @media (prefers-color-scheme: dark) {
-  :root { --fg: #e6edf3; --muted: #9198a1; --bg: #0d1117; --bg-alt: #151b23; --line: #3d444d; --link: #4493f8; --warn-bg: #3b2e00; --warn-line: #9e6a03; }
+  :root {
+    --fg: #e6edf3; --muted: #9198a1; --bg: #0d1117; --bg-alt: #151b23; --line: #3d444d; --link: #4493f8; --warn-bg: #3b2e00; --warn-line: #9e6a03;
+    --note: #4493f8; --tip: #3fb950; --info: #ab7df8; --warning: #d29922; --danger: #f85149;
+  }
 }
 * { box-sizing: border-box; }
 body { margin: 0; color: var(--fg); background: var(--bg); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -37,6 +43,22 @@ pre { padding: 1rem; overflow-x: auto; background: var(--bg-alt); border-radius:
 table { border-collapse: collapse; display: block; overflow-x: auto; }
 th, td { padding: 0.4rem 0.75rem; border: 1px solid var(--line); }
 img { max-width: 100%; }
+.admonition { --accent: var(--note); margin: 1rem 0; padding: 0.5rem 1rem; border-left: 4px solid var(--accent); background: var(--bg-alt); border-radius: 0 6px 6px 0; }
+.admonition-tip { --accent: var(--tip); }
+.admonition-info { --accent: var(--info); }
+.admonition-warning { --accent: var(--warning); }
+.admonition-danger { --accent: var(--danger); }
+.admonition-title { margin: 0.25rem 0; color: var(--accent); font-weight: 600; }
+.admonition > :last-child, .tab-panel > :last-child { margin-bottom: 0.5rem; }
+details.details { margin: 1rem 0; padding: 0.5rem 1rem; border: 1px solid var(--line); border-radius: 6px; }
+details.details > summary { cursor: pointer; font-weight: 600; }
+.tabs { margin: 1rem 0; }
+.tab-list { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 1px solid var(--line); }
+.tab-list[hidden] { display: none; }
+.tab-list [role="tab"] { padding: 0.4rem 0.9rem; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); font: inherit; cursor: pointer; }
+.tab-list [role="tab"][aria-selected="true"] { border-bottom-color: var(--link); color: var(--fg); font-weight: 600; }
+.tab-label { margin: 1rem 0 0.25rem; font-weight: 600; }
+.tabs-js .tab-label { display: none; }
 @media (max-width: 50rem) { .sidebar { flex-basis: 100%; border-bottom: 1px solid var(--line); } }
 </style>
 </head>
@@ -49,5 +71,54 @@ img { max-width: 100%; }
 <p>The page you are looking for does not exist. <a href="/basic/">Go to the home page</a>.</p>
 </main>
 
+<script>
+
+(() => {
+  const KEY = "tryck-tabs:";
+  const tabsOf = (el) => [...el.querySelectorAll(":scope > .tab-list > [role=tab]")];
+  function select(el, i, sync) {
+    const buttons = tabsOf(el);
+    const panels = el.querySelectorAll(":scope > [role=tabpanel]");
+    buttons.forEach((b, j) => {
+      b.setAttribute("aria-selected", String(i === j));
+      b.tabIndex = i === j ? 0 : -1;
+      if (panels[j]) panels[j].hidden = i !== j;
+    });
+    const group = el.dataset.group;
+    if (!sync || !group) return;
+    const label = buttons[i].textContent;
+    try { localStorage.setItem(KEY + group, label); } catch {}
+    document.querySelectorAll(".tabs[data-group]").forEach((other) => {
+      if (other !== el && other.dataset.group === group) selectLabel(other, label);
+    });
+  }
+  function selectLabel(el, label) {
+    const i = tabsOf(el).findIndex((b) => b.textContent === label);
+    if (i >= 0) select(el, i, false);
+  }
+  document.querySelectorAll(".tabs").forEach((el) => {
+    const list = el.querySelector(":scope > .tab-list");
+    if (!list) return;
+    list.hidden = false;
+    el.classList.add("tabs-js");
+    const buttons = tabsOf(el);
+    buttons.forEach((b, i) => {
+      b.addEventListener("click", () => select(el, i, true));
+      b.addEventListener("keydown", (e) => {
+        const n = buttons.length;
+        const j = { ArrowRight: (i + 1) % n, ArrowLeft: (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
+        if (j === undefined) return;
+        e.preventDefault();
+        select(el, j, true);
+        buttons[j].focus();
+      });
+    });
+    select(el, 0, false);
+    if (el.dataset.group) {
+      try { const saved = localStorage.getItem(KEY + el.dataset.group); if (saved) selectLabel(el, saved); } catch {}
+    }
+  });
+})();
+</script>
 </body>
 </html>

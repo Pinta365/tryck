@@ -8,7 +8,6 @@ import (
 	"cmp"
 	"context"
 	"errors"
-	"github.com/yuin/goldmark/ast"
 	"html/template"
 	"io"
 	"log/slog"
@@ -215,41 +214,19 @@ func (b *builder) parse(contentDir, rel string) *content.Page {
 	}
 	p.URL = content.URLFor(rel, front.Slug)
 	p.OutPath = content.OutputPath(p.URL)
-	var suffixed []string
-	p.AST, suffixed = b.md.Parse(body)
-	b.reportSuffixedIDs(p, suffixed)
+	var issues []markdown.Issue
+	p.AST, issues = b.md.Parse(body)
+	for _, is := range issues {
+		line := 0
+		if is.Offset >= 0 {
+			line = p.LineAt(is.Offset)
+		}
+		b.dc.Add(diag.Diagnostic{Severity: is.Severity, File: file, Line: line, Code: is.Code, Message: is.Message})
+	}
 	h1 := content.FirstH1(p.AST, body)
 	p.HasH1 = h1 != ""
 	p.Title = cmp.Or(front.Title, h1, content.TitleFromPath(rel), b.cfg.Site.Title, "Home")
 	return p
-}
-
-// reportSuffixedIDs adds heading.duplicateId info diagnostics.
-func (b *builder) reportSuffixedIDs(p *content.Page, ids []string) {
-	if len(ids) == 0 {
-		return
-	}
-	want := map[string]bool{}
-	for _, id := range ids {
-		want[id] = true
-	}
-	_ = ast.Walk(p.AST, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
-		h, ok := n.(*ast.Heading)
-		if !ok || !entering {
-			return ast.WalkContinue, nil
-		}
-		if v, ok := h.AttributeString("id"); ok {
-			if id, _ := v.([]byte); want[string(id)] {
-				line := 0
-				if h.Lines().Len() > 0 {
-					line = p.LineAt(h.Lines().At(0).Start)
-				}
-				b.dc.Infof(p.File, line, 0, "heading.duplicateId",
-					"heading ID %q needed a suffix to be unique; add {#id} to choose one", id)
-			}
-		}
-		return ast.WalkSkipChildren, nil
-	})
 }
 
 func (b *builder) render(s *Site, p *content.Page) ([]byte, bool) {

@@ -306,3 +306,18 @@ func TestDuplicateHeadingDiag(t *testing.T) {
 		t.Errorf("want info at content/a.md:9 about setup-1, got %v", site.Diags)
 	}
 }
+
+func TestDirectiveDiagnosticsUseFileLines(t *testing.T) {
+	site := mustBuild(t, writeSite(t, map[string]string{
+		"content/a.md": "---\ntitle: A\n---\n\nIntro.\n\n:::warning\nnever closed\n",
+		"content/b.md": ":::youtube\nx\n:::\n",
+	}))
+	d, ok := findDiag(site.Diags, "directive.unclosed")
+	if !ok || d.File != "content/a.md" || d.Line != 7 || d.Severity != diag.Error {
+		t.Errorf("want directive.unclosed error at content/a.md:7, got %v", site.Diags)
+	}
+	d, ok = findDiag(site.Diags, "directive.unknown")
+	if !ok || d.File != "content/b.md" || d.Line != 1 || d.Severity != diag.Warning {
+		t.Errorf("want directive.unknown warning at content/b.md:1, got %v", site.Diags)
+	}
+}
