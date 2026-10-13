@@ -133,5 +133,3 @@ go test -race ./...                      # all tests
 TRYCK_UPDATE=1 go test ./internal/build  # accept new golden output in testdata/sites/*/expected
 go test -run '^$' -bench . ./internal/build
 ```
-
-The design is specified in [docs/SPEC.md](docs/SPEC.md); decisions made while implementing it are logged at the end of that file.
