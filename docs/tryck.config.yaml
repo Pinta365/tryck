@@ -1,7 +1,7 @@
 site:
   title: tryck
   description: A single-binary static site generator for technical documentation.
-  baseUrl: "https://pinta365.github.io/tryck/"
+  baseUrl: "https://tryck.pinta.land/"
 
 theme:
   path: themes/pinta
