@@ -30,13 +30,20 @@ import (
 // Admonition kinds rendered as <aside class="admonition admonition-{kind}">.
 var admonitionKinds = map[string]bool{"note": true, "tip": true, "info": true, "warning": true, "danger": true}
 
+// IsBuiltin reports whether a directive name is rendered by tryck itself,
+// so plugins and templates cannot claim it.
+func IsBuiltin(name string) bool {
+	return admonitionKinds[name] || name == "details" || name == "tabs"
+}
+
 // fence holds what every directive node records about its source.
 type fence struct {
-	Name   string
-	Title  string
-	Length int  // number of colons in the opening fence
-	Offset int  // byte offset of the opening line in the source
-	Closed bool // a closing fence was found
+	Name     string
+	Title    string
+	Length   int    // number of colons in the opening fence
+	Offset   int    // byte offset of the opening line in the source
+	Closed   bool   // a closing fence was found
+	BadAttrs string // an {attrs} block that could not be parsed
 }
 
 func (f *fence) directive() *fence { return f }
@@ -154,14 +161,57 @@ func (directiveParser) Open(parent ast.Node, reader text.Reader, pc parser.Conte
 		node = &GenericDirective{fence: f}
 	}
 	if len(m[4]) > 0 {
-		if attrs, ok := parser.ParseAttributes(text.NewReader(m[4])); ok {
-			for _, a := range attrs {
-				node.SetAttribute(a.Name, a.Value)
-			}
+		attrs, ok := parser.ParseAttributes(text.NewReader(boolAttrs(m[4])))
+		if !ok {
+			node.directive().BadAttrs = string(m[4])
+		}
+		for _, a := range attrs {
+			node.SetAttribute(a.Name, a.Value)
 		}
 	}
 	reader.AdvanceToEOL()
 	return node, parser.HasChildren
+}
+
+// boolAttrs rewrites bare names in an {attrs} block, such as {open},
+// to name=true, which goldmark's attribute parser requires.
+func boolAttrs(b []byte) []byte {
+	inner := b[1 : len(b)-1]
+	var out []byte
+	var quote byte
+	start := -1
+	flush := func(end int) {
+		if start < 0 {
+			return
+		}
+		tok := inner[start:end]
+		out = append(out, tok...)
+		if c := tok[0]; c != '.' && c != '#' && !bytes.ContainsRune(tok, '=') {
+			out = append(out, "=true"...)
+		}
+		start = -1
+	}
+	for i := 0; i < len(inner); i++ {
+		c := inner[i]
+		switch {
+		case quote != 0:
+			if c == quote {
+				quote = 0
+			}
+			continue
+		case c == '"' || c == '\'':
+			quote = c
+		case c == ' ' || c == '\t':
+			flush(i)
+			out = append(out, c)
+			continue
+		}
+		if start < 0 {
+			start = i
+		}
+	}
+	flush(len(inner))
+	return append(append([]byte{'{'}, out...), '}')
 }
 
 func (directiveParser) Continue(node ast.Node, reader text.Reader, pc parser.Context) parser.State {
@@ -246,11 +296,25 @@ func (tabParser) Open(parent ast.Node, reader text.Reader, pc parser.Context) (a
 func (tabParser) Continue(node ast.Node, reader text.Reader, pc parser.Context) parser.State {
 	line, _ := reader.PeekLine()
 	if pos := pc.BlockOffset(); pos >= 0 {
-		if _, ok := tabLabel(line[pos:]); ok && !deferToOpenChild(node, pc, 0, 0) {
+		if _, ok := tabLabel(line[pos:]); ok && !deferToOpenChild(node, pc, 0, 0) && !hasOpenTabs(node, pc) {
 			return parser.Close // the next @tab opens a sibling
 		}
 	}
 	return parser.Continue | parser.HasChildren
+}
+
+// hasOpenTabs reports whether a Tabs directive is open inside node; an
+// @tab line then belongs to that innermost Tabs.
+func hasOpenTabs(node ast.Node, pc parser.Context) bool {
+	inside := false
+	for _, b := range pc.OpenedBlocks() {
+		if b.Node == node {
+			inside = true
+		} else if _, ok := b.Node.(*Tabs); ok && inside {
+			return true
+		}
+	}
+	return false
 }
 
 // tabLabel parses "@tab Label".
@@ -269,7 +333,8 @@ func (tabParser) CanAcceptIndentedLine() bool                                { r
 
 // directives is the goldmark extension for ::: blocks.
 type directives struct {
-	custom map[string]plugin.DirectiveRenderer
+	custom    map[string]plugin.DirectiveRenderer
+	templates map[string]DirectiveTemplate
 }
 
 func (d directives) Extend(m goldmark.Markdown) {
@@ -277,5 +342,5 @@ func (d directives) Extend(m goldmark.Markdown) {
 		util.Prioritized(directiveParser{}, 50),
 		util.Prioritized(tabParser{}, 50),
 	))
-	m.Renderer().AddOptions(renderer.WithNodeRenderers(util.Prioritized(directiveRenderer{custom: d.custom}, 500)))
+	m.Renderer().AddOptions(renderer.WithNodeRenderers(util.Prioritized(directiveRenderer{custom: d.custom, templates: d.templates}, 500)))
 }

@@ -27,6 +27,9 @@ type Options struct {
 	Extenders []plugin.MarkdownExtender
 	// Directives render ::: names tryck does not know, by name.
 	Directives map[string]plugin.DirectiveRenderer
+	// Templates render ::: names tryck does not know from templates, by
+	// name.
+	Templates map[string]DirectiveTemplate
 	// SitePath maps root-absolute links in RenderInline to final URLs,
 	// for example by adding the base path.
 	SitePath func(string) string
@@ -34,9 +37,10 @@ type Options struct {
 
 // Processor parses and renders Markdown. It is safe for concurrent use.
 type Processor struct {
-	md       goldmark.Markdown
-	custom   map[string]plugin.DirectiveRenderer
-	sitePath func(string) string
+	md        goldmark.Markdown
+	custom    map[string]plugin.DirectiveRenderer
+	templates map[string]DirectiveTemplate
+	sitePath  func(string) string
 }
 
 // New returns a Processor configured from opts.
@@ -46,7 +50,7 @@ func New(opts Options) *Processor {
 		rendererOpts = append(rendererOpts, goldmark.WithRendererOptions(html.WithUnsafe()))
 	}
 	md := goldmark.New(append([]goldmark.Option{
-		goldmark.WithExtensions(extension.GFM, directives{custom: opts.Directives}),
+		goldmark.WithExtensions(extension.GFM, directives{custom: opts.Directives, templates: opts.Templates}),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(), // via ids: Slugify, dupes get -1, -2
 			parser.WithAttribute(),     // {#custom-id} wins over the generated ID
@@ -55,7 +59,7 @@ func New(opts Options) *Processor {
 	for _, e := range opts.Extenders {
 		e.Extend(md)
 	}
-	return &Processor{md: md, custom: opts.Directives, sitePath: opts.SitePath}
+	return &Processor{md: md, custom: opts.Directives, templates: opts.Templates, sitePath: opts.SitePath}
 }
 
 // Issue is a problem found while parsing, located by byte offset in the
@@ -93,9 +97,9 @@ func (p *Processor) inspect(doc ast.Node, suffixed []string) []Issue {
 				issues = append(issues, Issue{diag.Error, "directive.unclosed", d.Offset,
 					fmt.Sprintf("%s%s directive is never closed; end it with a line of %d or more colons", strings.Repeat(":", d.Length), d.Name, d.Length)})
 			}
-			if _, ok := n.(*GenericDirective); ok && p.custom[d.Name] == nil {
-				issues = append(issues, Issue{diag.Warning, "directive.unknown", d.Offset,
-					fmt.Sprintf("unknown directive %q, rendered as a plain <div>", d.Name)})
+			if d.BadAttrs != "" {
+				issues = append(issues, Issue{diag.Warning, "directive.attrs", d.Offset,
+					fmt.Sprintf("cannot parse attributes %s of %s%s; they are ignored", d.BadAttrs, strings.Repeat(":", d.Length), d.Name)})
 			}
 		}
 		if t, ok := n.(*Tabs); ok {
@@ -120,6 +124,21 @@ func (p *Processor) inspect(doc ast.Node, suffixed []string) []Issue {
 						fmt.Sprintf("heading ID %q needed a suffix to be unique; add {#id} to choose one", id)})
 				}
 			}
+		}
+		return ast.WalkContinue, nil
+	})
+	return issues
+}
+
+// Unknown reports directives that have no renderer. It is separate from
+// Parse because the renderers can change while parsed documents are
+// reused.
+func (p *Processor) Unknown(doc ast.Node) []Issue {
+	var issues []Issue
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if g, ok := n.(*GenericDirective); ok && entering && p.custom[g.Name] == nil && p.templates[g.Name] == nil {
+			issues = append(issues, Issue{diag.Warning, "directive.unknown", g.Offset,
+				fmt.Sprintf("unknown directive %q, rendered as a plain <div>", g.Name)})
 		}
 		return ast.WalkContinue, nil
 	})

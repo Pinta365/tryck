@@ -12,6 +12,7 @@ import (
 
 	"github.com/Pinta365/tryck/internal/config"
 	"github.com/Pinta365/tryck/internal/diag"
+	"github.com/Pinta365/tryck/internal/markdown"
 	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
@@ -123,7 +124,6 @@ func Each[T any](s *Set) []T {
 // Directives maps directive names to the plugins rendering them. A name
 // claimed twice, or a built-in name, is an error.
 func (s *Set) Directives() (map[string]plugin.DirectiveRenderer, []diag.Diagnostic) {
-	reserved := map[string]bool{"note": true, "tip": true, "info": true, "warning": true, "danger": true, "tabs": true, "details": true}
 	var ds []diag.Diagnostic
 	m := map[string]plugin.DirectiveRenderer{}
 	owner := map[string]string{}
@@ -134,7 +134,7 @@ func (s *Set) Directives() (map[string]plugin.DirectiveRenderer, []diag.Diagnost
 		}
 		for _, name := range dr.DirectiveNames() {
 			switch {
-			case reserved[name]:
+			case markdown.IsBuiltin(name):
 				ds = append(ds, diag.Diagnostic{Severity: diag.Error, Code: "plugin.config",
 					Message: fmt.Sprintf("plugin %s: directive %q is built in", p.Name(), name)})
 			case owner[name] != "":

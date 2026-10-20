@@ -11,6 +11,7 @@ func renderMD(t *testing.T, src string) (string, []Issue) {
 	t.Helper()
 	p := New(Options{})
 	doc, issues := p.Parse([]byte(src))
+	issues = append(issues, p.Unknown(doc)...)
 	out, err := p.Render(doc, []byte(src))
 	if err != nil {
 		t.Fatal(err)
@@ -93,6 +94,11 @@ func TestDirectives(t *testing.T) {
 			src:  ":::details[More info]\nhidden\n:::\n\n:::details{open=true}\nshown\n:::\n",
 			want: "<details class=\"details\">\n<summary>More info</summary>\n<p>hidden</p>\n</details>\n" +
 				"<details class=\"details\" open>\n<summary>Details</summary>\n<p>shown</p>\n</details>\n",
+		},
+		{
+			name: "bare boolean attribute",
+			src:  ":::details[More]{#more .x open}\nshown\n:::\n",
+			want: "<details class=\"details x\" id=\"more\" open>\n<summary>More</summary>\n<p>shown</p>\n</details>\n",
 		},
 		{
 			name: "inside a list item",
@@ -184,6 +190,28 @@ func TestTabsEdgeCases(t *testing.T) {
 			t.Errorf("got:\n%s", got)
 		}
 	})
+	t.Run("tabs nested in tab", func(t *testing.T) {
+		for _, src := range []string{
+			"::::tabs\n@tab Outer A\n:::tabs\n@tab Inner 1\none\n@tab Inner 2\ntwo\n:::\n@tab Outer B\nouter b\n::::\n",
+			":::tabs\n@tab Outer A\n:::tabs\n@tab Inner 1\none\n@tab Inner 2\ntwo\n:::\n@tab Outer B\nouter b\n:::\n",
+		} {
+			got, issues := renderMD(t, src)
+			if len(issues) != 0 {
+				t.Errorf("issues %v for:\n%s", issues, src)
+			}
+			for _, want := range []string{
+				`id="tabs-1-panel-1" aria-labelledby="tabs-1-tab-1">` + "\n" + `<p class="tab-label" role="heading" aria-level="4">Outer B</p>` + "\n<p>outer b</p>",
+				`id="tabs-2-panel-1" aria-labelledby="tabs-2-tab-1">` + "\n" + `<p class="tab-label" role="heading" aria-level="4">Inner 2</p>` + "\n<p>two</p>",
+			} {
+				if !strings.Contains(got, want) {
+					t.Errorf("missing %q in:\n%s", want, got)
+				}
+			}
+			if strings.Count(got, `role="tabpanel"`) != 4 {
+				t.Errorf("want 4 panels, got:\n%s", got)
+			}
+		}
+	})
 	t.Run("directive nested in tab", func(t *testing.T) {
 		got, issues := renderMD(t, "::::tabs\n@tab A\n:::note\nn\n:::\n@tab B\nb\n::::\n")
 		if len(issues) != 0 || !strings.Contains(got, "<aside class=\"admonition admonition-note\">\n<p>n</p>\n</aside>\n</div>") {
@@ -205,6 +233,8 @@ func TestDirectiveIssues(t *testing.T) {
 		{"longer inner takes its own fence", ":::note\n::::tip\nx\n::::\n:::\n", nil},
 		{"space after colons is not a directive", "::: note\nx\n", nil},
 		{"unknown", "\n:::youtube\nx\n:::\n", []string{"2:warning[directive.unknown]"}},
+		{"unparsable attributes", ":::note{title=\"x}\nx\n:::\n", []string{"1:warning[directive.attrs]"}},
+		{"quoted spaces and bare names", ":::details{title=\"a b\" open}\nx\n:::\n", nil},
 		{"content before first tab", ":::tabs\nstray\n\n@tab A\na\n:::\n", []string{"2:warning[directive.tabContent]"}},
 		{"tabs without tabs", ":::tabs\n:::\n", []string{"1:warning[directive.tabContent]"}},
 		{"duplicate heading", "## A\n\n## A\n", []string{"3:info[heading.duplicateId]"}},

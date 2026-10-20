@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
+	"maps"
 	"net/url"
 	"os"
 	"path"
@@ -82,9 +83,20 @@ type NavLink struct {
 // ErrMissingLayout is returned by Execute for an unknown layout name.
 var ErrMissingLayout = errors.New("layout not found")
 
-// Templates holds one executable template set per layout.
+// Templates holds one executable template set per layout, and one per
+// directive template (directives/<name>.html).
 type Templates struct {
-	layouts map[string]*template.Template
+	layouts    map[string]*template.Template
+	directives map[string]*template.Template
+}
+
+// DirectiveData is the dot value of a directive template.
+type DirectiveData struct {
+	Name    string            // the directive name
+	Title   string            // from :::name[title]
+	Attrs   map[string]string // from {key=value .class #id}; class and id included
+	Content template.HTML     // the rendered body
+	Site    SiteInfo
 }
 
 type layoutFile struct {
@@ -123,7 +135,7 @@ func Load(dirs []Dir, funcs template.FuncMap) (*Templates, []diag.Diagnostic) {
 	for _, d := range dirs {
 		if err := readLayouts(d, files); err != nil {
 			dc.Errorf(d.Label, 0, 0, "template.parse", "cannot read layouts: %v", err)
-			return &Templates{layouts: map[string]*template.Template{}}, dc.All()
+			return &Templates{layouts: map[string]*template.Template{}, directives: map[string]*template.Template{}}, dc.All()
 		}
 	}
 
@@ -147,9 +159,32 @@ func Load(dirs []Dir, funcs template.FuncMap) (*Templates, []diag.Diagnostic) {
 		}
 	}
 
-	t := &Templates{layouts: map[string]*template.Template{}}
+	t := &Templates{layouts: map[string]*template.Template{}, directives: map[string]*template.Template{}}
 	for _, n := range names {
 		f := files[n]
+		if name, ok := strings.CutPrefix(n, "directives/"); ok {
+			name = strings.TrimSuffix(name, ".html")
+			switch {
+			case !directiveNameRE.MatchString(name):
+				dc.Errorf(f.label, 0, 0, "template.parse", "%q is not a directive name: use letters, digits, - and _, starting with a letter", name)
+				continue
+			case markdown.IsBuiltin(name):
+				dc.Errorf(f.label, 0, 0, "template.parse", "%q is a built-in directive and cannot be replaced by a template", name)
+				continue
+			}
+			set, err := base.Clone()
+			if err != nil {
+				dc.Add(parseDiag(f, err))
+				continue
+			}
+			set.Funcs(template.FuncMap{"partial": partialFunc(set)})
+			if _, err := set.New(n).Parse(f.content); err != nil {
+				dc.Add(parseDiag(f, err))
+				continue
+			}
+			t.directives[name] = set.Lookup(n)
+			continue
+		}
 		if n == "baseof.html" || strings.Contains(n, "/") {
 			continue
 		}
@@ -215,6 +250,23 @@ func parseDiag(f layoutFile, err error) diag.Diagnostic {
 		d.Message = strings.TrimPrefix(err.Error(), m[0])
 	}
 	return d
+}
+
+// directiveNameRE matches the names the ::: syntax accepts.
+var directiveNameRE = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_-]*$`)
+
+// DirectiveNames lists the directive templates, sorted.
+func (t *Templates) DirectiveNames() []string {
+	return slices.Sorted(maps.Keys(t.directives))
+}
+
+// ExecuteDirective renders data with the directive template for name.
+func (t *Templates) ExecuteDirective(w io.Writer, name string, data DirectiveData) error {
+	tmpl, ok := t.directives[name]
+	if !ok {
+		return fmt.Errorf("no template for directive %q", name)
+	}
+	return tmpl.Execute(w, data)
 }
 
 // Has reports whether a layout exists.

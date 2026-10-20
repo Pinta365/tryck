@@ -109,17 +109,13 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	b.styles = set.Stylesheets()
 	directives, ds := set.Directives()
 	b.dc.Add(ds...)
-	b.md = markdown.New(markdown.Options{
-		UnsafeHTML: cfg.Build.UnsafeHTML,
-		Extenders:  plugins.Each[plugin.MarkdownExtender](set),
-		Directives: directives,
-		SitePath:   func(p string) string { return render.RelURL(cfg.Site.BaseURL, p) },
-	})
 
+	// Templates are loaded before the Markdown processor, which renders
+	// directive templates; markdownify reaches the processor once built.
 	funcs := render.Funcs(render.FuncOptions{
 		BaseURL:     cfg.Site.BaseURL,
 		DateFormat:  cfg.Defaults.DateFormat,
-		Markdownify: b.md.RenderInline,
+		Markdownify: func(s string) (string, error) { return b.md.RenderInline(s) },
 	})
 	var layoutDirs []render.Dir
 	for _, d := range cfg.LayoutDirs() {
@@ -128,6 +124,14 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	tmpl, ds := render.Load(layoutDirs, funcs)
 	b.dc.Add(ds...)
 	b.tmpl = tmpl
+
+	b.md = markdown.New(markdown.Options{
+		UnsafeHTML: cfg.Build.UnsafeHTML,
+		Extenders:  plugins.Each[plugin.MarkdownExtender](set),
+		Directives: directives,
+		Templates:  b.directiveTemplates(directives),
+		SitePath:   func(p string) string { return render.RelURL(cfg.Site.BaseURL, p) },
+	})
 	b.theme = b.themeData()
 
 	contentDir := cfg.Dir(cfg.Build.ContentDir)
@@ -299,7 +303,7 @@ func (b *builder) parsePage(p *content.Page, links *linkResolver) {
 		b.opts.Cache.put(p.SourcePath, e)
 	}
 	p.AST = e.doc
-	for _, is := range e.issues {
+	for _, is := range slices.Concat(e.issues, b.md.Unknown(e.doc)) {
 		line := 0
 		if is.Offset >= 0 {
 			line = p.LineAt(is.Offset)
@@ -397,6 +401,24 @@ func (b *builder) renderNotFound(s *Site) {
 		}
 	}
 	s.Outputs[NotFoundPath] = buf.Bytes()
+}
+
+// directiveTemplates wraps the layouts' directive templates for the
+// Markdown processor. A name a plugin already renders is an error.
+func (b *builder) directiveTemplates(byPlugin map[string]plugin.DirectiveRenderer) map[string]markdown.DirectiveTemplate {
+	m := map[string]markdown.DirectiveTemplate{}
+	for _, name := range b.tmpl.DirectiveNames() {
+		if byPlugin[name] != nil {
+			b.dc.Errorf(b.cfg.Path, 0, 0, "plugin.config", "directive %q is rendered by a plugin and by a template in directives/; remove one", name)
+			continue
+		}
+		m[name] = func(w io.Writer, d plugin.Directive, content template.HTML) error {
+			return b.tmpl.ExecuteDirective(w, name, render.DirectiveData{
+				Name: d.Name, Title: d.Title, Attrs: d.Attrs, Content: content, Site: b.site,
+			})
+		}
+	}
+	return m
 }
 
 // themeData prepares the theme config for templates.

@@ -1,8 +1,11 @@
 package markdown
 
 import (
+	"bytes"
 	"cmp"
 	"fmt"
+	"html/template"
+	"io"
 	"strconv"
 	"strings"
 
@@ -13,8 +16,17 @@ import (
 	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
+// DirectiveTemplate renders a directive from a template. content is
+// where the directive's body goes; it is passed as a marker that the
+// renderer splits the output at.
+type DirectiveTemplate func(w io.Writer, d plugin.Directive, content template.HTML) error
+
+// contentMarker stands in for a template directive's body.
+const contentMarker = "<!--tryck:content-->"
+
 type directiveRenderer struct {
-	custom map[string]plugin.DirectiveRenderer // by directive name
+	custom    map[string]plugin.DirectiveRenderer // by directive name
+	templates map[string]DirectiveTemplate        // by directive name
 }
 
 func (r directiveRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
@@ -59,12 +71,28 @@ func renderDetails(w util.BufWriter, _ []byte, node ast.Node, entering bool) (as
 func (r directiveRenderer) renderGeneric(w util.BufWriter, _ []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	n := node.(*GenericDirective)
 	if pr, ok := r.custom[n.Name]; ok {
-		d := plugin.Directive{Name: n.Name, Title: n.Title, Attrs: map[string]string{}}
-		for _, a := range n.Attributes() {
-			d.Attrs[string(a.Name)] = string(attrBytes(a.Value))
-		}
-		if err := pr.RenderDirective(w, d, entering); err != nil {
+		if err := pr.RenderDirective(w, pluginDirective(n), entering); err != nil {
 			return ast.WalkStop, fmt.Errorf(":::%s: %w", n.Name, err)
+		}
+		return ast.WalkContinue, nil
+	}
+	if tf, ok := r.templates[n.Name]; ok {
+		// The template runs on entering and again on exit: the output
+		// before the body marker is written first, the rest after the
+		// body. A template without the marker drops the body.
+		var buf bytes.Buffer
+		if err := tf(&buf, pluginDirective(n), contentMarker); err != nil {
+			return ast.WalkStop, fmt.Errorf(":::%s: %w", n.Name, err)
+		}
+		before, after, found := strings.Cut(buf.String(), contentMarker)
+		switch {
+		case entering && !found:
+			w.WriteString(before)
+			return ast.WalkSkipChildren, nil
+		case entering:
+			w.WriteString(before)
+		case found:
+			w.WriteString(after)
 		}
 		return ast.WalkContinue, nil
 	}
@@ -198,6 +226,15 @@ func validAttrName(s string) bool {
 		}
 	}
 	return true
+}
+
+// pluginDirective describes n for a plugin or template renderer.
+func pluginDirective(n *GenericDirective) plugin.Directive {
+	d := plugin.Directive{Name: n.Name, Title: n.Title, Attrs: map[string]string{}}
+	for _, a := range n.Attributes() {
+		d.Attrs[string(a.Name)] = string(attrBytes(a.Value))
+	}
+	return d
 }
 
 func attrBytes(v any) []byte {

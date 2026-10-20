@@ -252,3 +252,17 @@ func TestSitemapNeedsAbsoluteBaseURL(t *testing.T) {
 		t.Errorf("want sitemap.baseUrl warning, got %v", site.Diags)
 	}
 }
+
+func TestDirectiveClaimedByPluginAndTemplate(t *testing.T) {
+	cfg := writeSite(t, map[string]string{
+		"layouts/directives/shout.html": `<b>{{ .Content }}</b>`,
+		"content/a.md":                  "# A\n",
+	})
+	site, err := build.Build(context.Background(), cfg, build.Options{Plugins: []plugin.Plugin{&probe{}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d, ok := findDiag(site.Diags, "plugin.config"); !ok || !strings.Contains(d.Message, `"shout"`) {
+		t.Errorf("want plugin.config for shout, got %v", site.Diags)
+	}
+}
