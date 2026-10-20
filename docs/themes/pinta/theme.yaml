@@ -1,0 +1,7 @@
+# A terminal-flavoured theme in light and dark: green accent, Manrope
+# and JetBrains Mono, and a "$ title" brand with a blinking caret.
+colorScheme: auto
+# No accent: the stylesheet sets it per scheme.
+css: [/css/pinta.css]
+params:
+  brandSuffix: ""

@@ -1,0 +1,19 @@
+<header class="site-header">
+<a class="site-title brand" href="{{ relURL "/" }}">
+{{- with .Theme.Logo }}<img class="site-logo" src="{{ relURL . }}" alt="">{{ end -}}
+<span class="brand-sigil" aria-hidden="true">$</span>
+<span class="brand-name">{{ or .Site.Title "Home" }}</span>
+{{- with .Theme.Params.brandSuffix }}<span class="brand-suffix">{{ . }}</span>{{ end -}}
+<span class="brand-caret" aria-hidden="true"></span></a>
+{{- with .Theme.Nav }}
+<nav class="site-nav" aria-label="Links">
+{{- range . }}
+<a href="{{ relURL .URL }}">{{ .Title }}</a>
+{{- end }}
+</nav>
+{{- end }}
+{{- if eq .Theme.ColorScheme "auto" }}
+<button type="button" class="theme-toggle" aria-label="Switch between light and dark" title="Switch between light and dark"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg></button>
+{{- end }}
+<button type="button" class="nav-toggle" aria-expanded="false" hidden>Menu</button>
+</header>

@@ -1,0 +1,95 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=swap");
+
+/* Colours from the Pinta design system, in light and dark. The selectors
+   match the built-in theme's, so these win over it.
+
+   The mint green is used for fills and marks in both schemes. In dark
+   mode it is also the text accent; in light mode text stays ink and the
+   mint only appears behind or under it. */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #fafbfa; --bg-alt: #f0f3f1; --bg-code: #f4f6f5;
+  --fg: #0b0d10; --muted: #59636e; --faint: #8b98a5;
+  --line: #dde3e0; --line-strong: #c8d0cc;
+  --accent: #0b0d10; --link: #0b0d10; --label: #59636e;
+  --current-fg: #0b0d10; --current-bg: #7cf29e;
+  --note: #0969da; --tip: #15803d; --info: #0f766e; --warning: #9a6700; --danger: #cf222e;
+  --warn-bg: #fff8c5; --warn-line: #d4a72c;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0d10; --bg-alt: #12161a; --bg-code: #0f1216;
+  --fg: #e8ecef; --muted: #8b98a5; --faint: #5c6672;
+  --line: #21272d; --line-strong: #2a3138;
+  --accent: #7cf29e; --link: #7cf29e; --label: #7cf29e;
+  --current-fg: #7cf29e; --current-bg: transparent;
+  --note: #7cc4ff; --tip: #7cf29e; --info: #5eead4; --warning: #f2b35c; --danger: #ff7b72;
+  --warn-bg: #2a2111; --warn-line: #f2b35c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0b0d10; --bg-alt: #12161a; --bg-code: #0f1216;
+    --fg: #e8ecef; --muted: #8b98a5; --faint: #5c6672;
+    --line: #21272d; --line-strong: #2a3138;
+    --accent: #7cf29e; --link: #7cf29e; --label: #7cf29e;
+    --current-fg: #7cf29e; --current-bg: transparent;
+    --note: #7cc4ff; --tip: #7cf29e; --info: #5eead4; --warning: #f2b35c; --danger: #ff7b72;
+    --warn-bg: #2a2111; --warn-line: #f2b35c;
+  }
+}
+:root {
+  --mint: #7cf29e; --on-mint: #0b0d10;
+  --font: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+h1, h2, h3 { letter-spacing: -0.02em; }
+a { text-decoration-color: var(--mint); text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
+a:hover { text-decoration-thickness: 0.35em; }
+
+/* Header: follows the page; the brand "$ title ▌" is a dark terminal
+   chip in both schemes, so the mint caret always sits on black. */
+.site-header { padding: 0.75rem 1.25rem; border-bottom-color: var(--line); }
+.brand { gap: 0; padding: 0.4rem 0.75rem; border-radius: 6px; background: #0b0d10; font-family: var(--font-mono); font-size: 1rem; font-weight: 700; }
+.site-header .brand { color: #e8ecef; }
+.brand-sigil { margin-right: 0.5rem; color: var(--mint); }
+.brand-suffix { margin-left: 0.4rem; color: #5c6672; font-weight: 400; }
+.brand-caret { display: inline-block; width: 0.5rem; height: 1.1em; margin-left: 0.4rem; background: var(--mint); animation: brand-blink 1s step-end infinite; }
+@keyframes brand-blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .brand-caret { animation: none; } }
+.site-nav a { font-weight: 600; text-decoration: none; }
+.site-nav a:hover { color: var(--fg); }
+
+/* Labels: small, uppercase, spaced */
+.toc-title, .nav-section, .pager span, .admonition-title {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+}
+.toc-title, .pager span { color: var(--label); }
+.nav-section { color: var(--muted); }
+
+/* Navigation: no underlines; the current page is marked */
+.sidebar a, .toc a, .pager a { text-decoration: none; }
+.sidebar a[aria-current="page"] { margin-left: -0.4rem; padding: 0.1rem 0.4rem; border-radius: 4px; background: var(--current-bg); color: var(--current-fg); }
+.pager a:hover { text-decoration: underline; text-decoration-color: var(--mint); }
+
+/* Code: terminal panels */
+pre { background: var(--bg-code); border: 1px solid var(--line); border-radius: 8px; }
+/* Repeated class: outranks the highlighting theme's :root[data-theme] .chroma background. */
+pre.chroma.chroma.chroma { background: var(--bg-code); }
+:not(pre) > code { background: var(--bg-alt); border: 1px solid var(--line); }
+
+/* Panels: raised, with a hairline border */
+.admonition { background: var(--bg-alt); border: 1px solid var(--line); border-left: 3px solid var(--adm); border-radius: 0 8px 8px 0; }
+details.details { background: var(--bg-alt); border-color: var(--line); border-radius: 8px; }
+th, td { border-color: var(--line); }
+th { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); }
+
+/* Tabs: like toggle buttons, the selected one filled with mint */
+.tab-list { gap: 0.4rem; padding-bottom: 0.5rem; border-bottom: 0; }
+.tab-list [role="tab"] { padding: 0.35rem 0.9rem; border: 1px solid var(--line-strong); border-radius: 6px; font-family: var(--font-mono); font-size: 0.85rem; }
+.tab-list [role="tab"][aria-selected="true"] { background: var(--mint); border-color: var(--mint); color: var(--on-mint); }
+.nav-toggle, .theme-toggle { border-color: var(--line-strong); }

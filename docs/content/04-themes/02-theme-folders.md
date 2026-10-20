@@ -20,6 +20,8 @@ themes/acme/
 
 The path must be a directory; anything else is a `config.invalid` error.
 
+This site uses one: [`docs/themes/pinta`](https://github.com/Pinta365/tryck/tree/main/docs/themes/pinta) replaces the header partial and adds a stylesheet with its own light and dark colours.
+
 ## theme.yaml
 
 `theme.yaml` supplies default values for the `theme` section. It accepts the same keys as `theme` in the site config, except `path`:
