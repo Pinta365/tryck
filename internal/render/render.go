@@ -59,6 +59,7 @@ type TemplateData struct {
 	Prev, Next  *PageInfo         // nil at the ends
 	Stylesheets []string          // site paths of plugin CSS to link in <head>
 	Theme       ThemeData         // theme settings from the config
+	SearchIndex string            // site path of the search index, "" if search is off
 	Dev         bool              // true in tryck dev
 }
 

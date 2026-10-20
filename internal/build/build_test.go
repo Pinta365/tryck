@@ -343,3 +343,27 @@ func TestHeadAndBodyEndPartials(t *testing.T) {
 		}
 	}
 }
+
+func TestSearchBox(t *testing.T) {
+	site := mustBuild(t, writeSite(t, map[string]string{"content/a.md": "# A\n\n## Install it {#setup}\n"}))
+	a := string(site.Outputs["a/index.html"])
+	for _, want := range []string{`<script src="/js/search.js" defer></script>`, `<div class="search" data-index="/search-index.json" hidden>`} {
+		if !strings.Contains(a, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if _, ok := site.Outputs["js/search.js"]; !ok {
+		t.Error("js/search.js is not written")
+	}
+	if idx := string(site.Outputs["search-index.json"]); !strings.Contains(idx, `"headings":[{"id":"setup","text":"Install it"}]`) {
+		t.Errorf("headings need ids: %s", idx)
+	}
+
+	off := mustBuild(t, writeSite(t, map[string]string{
+		"tryck.config.yaml": "site:\n  baseUrl: https://example.com/\nplugins:\n  search:\n    enabled: false\n",
+		"content/a.md":      "# A\n",
+	}))
+	if a := string(off.Outputs["a/index.html"]); strings.Contains(a, "search") {
+		t.Errorf("search is off but the page has a search box or script:\n%s", a)
+	}
+}

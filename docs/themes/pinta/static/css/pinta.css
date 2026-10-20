@@ -93,3 +93,10 @@ th { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); }
 .tab-list [role="tab"] { padding: 0.35rem 0.9rem; border: 1px solid var(--line-strong); border-radius: 6px; font-family: var(--font-mono); font-size: 0.85rem; }
 .tab-list [role="tab"][aria-selected="true"] { background: var(--mint); border-color: var(--mint); color: var(--on-mint); }
 .nav-toggle, .theme-toggle { border-color: var(--line-strong); }
+
+/* Search: monospace button and input, mint marks */
+.search-open, .search-input { font-family: var(--font-mono); }
+.search-open { font-size: 0.85rem; border-color: var(--line-strong); }
+.search-dialog { border-color: var(--line-strong); }
+.search-results mark { background: color-mix(in srgb, var(--mint) 55%, transparent); }
+.search-heading { color: var(--label); font-family: var(--font-mono); font-size: 0.8rem; }

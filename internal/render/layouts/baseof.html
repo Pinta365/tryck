@@ -24,6 +24,9 @@
 {{- if eq .Theme.ColorScheme "auto" }}
 <script>try { const t = localStorage.getItem("tryck-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
 {{- end }}
+{{- with .SearchIndex }}
+<script src="{{ relURL "/js/search.js" }}" defer></script>
+{{- end }}
 {{- partial "head-end" . }}
 </head>
 <body>

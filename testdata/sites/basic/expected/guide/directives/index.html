@@ -8,10 +8,22 @@
 <link rel="stylesheet" href="/basic/css/tryck.css">
 <link rel="stylesheet" href="/basic/css/chroma.css">
 <script>try { const t = localStorage.getItem("tryck-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+<script src="/basic/js/search.js" defer></script>
 </head>
 <body>
 <header class="site-header">
 <a class="site-title" href="/basic/"><span>Basic Docs</span></a>
+<div class="search" data-index="/basic/search-index.json" hidden>
+<button type="button" class="search-open" aria-haspopup="dialog"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="m11 11 4 4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg><span>Search</span><kbd>/</kbd></button>
+<dialog class="search-dialog" aria-label="Search">
+<div class="search-bar" role="search">
+<input type="search" class="search-input" placeholder="Search" aria-label="Search" role="combobox" aria-controls="search-results" aria-expanded="false" aria-autocomplete="list" autocomplete="off" spellcheck="false">
+<button type="button" class="search-close">Esc</button>
+</div>
+<p class="search-status" aria-live="polite"></p>
+<ul id="search-results" class="search-results" role="listbox" aria-label="Results"></ul>
+</dialog>
+</div>
 <button type="button" class="theme-toggle" aria-label="Switch between light and dark" title="Switch between light and dark"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg></button>
 <button type="button" class="nav-toggle" aria-expanded="false" hidden>Menu</button>
 </header>

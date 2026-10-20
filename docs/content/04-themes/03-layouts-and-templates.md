@@ -28,7 +28,7 @@ layout: landing
 
 ## Partials
 
-Shared fragments live in `partials/` and are called with the `partial` function. The built-in theme has `header`, `sidebar`, `toc` and `footer`, plus two empty ones for your own additions: `head-end` and `body-end` (see [Adding scripts and analytics](#adding-scripts-and-analytics)).
+Shared fragments live in `partials/` and are called with the `partial` function. The built-in theme has `header`, `sidebar`, `toc`, `footer` and `search` (the search box, empty when the search plugin is off), plus two empty ones for your own additions: `head-end` and `body-end` (see [Adding scripts and analytics](#adding-scripts-and-analytics)).
 
 ```html
 {{ partial "header" . }}
@@ -80,6 +80,7 @@ Every layout is executed with these fields:
 | `.TOC` | list of TOCEntry | The table of contents (`.Level`, `.ID`, `.Text`, `.Children`), or empty. |
 | `.Prev`, `.Next` | PageInfo | Neighbouring pages in navigation order, or nil. |
 | `.Stylesheets` | list of strings | Site paths of plugin CSS, for example `/css/chroma.css`. |
+| `.SearchIndex` | string | Site path of the search index, or empty when the search plugin is off. |
 | `.Theme` | ThemeData | `Accent`, `AccentDark`, `Logo`, `ColorScheme`, `Nav`, `Footer`, `CSS`, `Params`. |
 | `.Dev` | bool | True while `tryck dev` is serving. |
 

@@ -12,6 +12,7 @@
 :root[data-theme="dark"] { --accent: color-mix(in srgb, #0b7a5a 60%, white); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --accent: color-mix(in srgb, #0b7a5a 60%, white); } }
 </style>
+<script src="/themed/js/search.js" defer></script>
 </head>
 <body>
 <header class="site-header">
@@ -20,6 +21,17 @@
 <a href="https://github.com/Pinta365/tryck">GitHub</a>
 <a href="/themed/guide/">Guide</a>
 </nav>
+<div class="search" data-index="/themed/search-index.json" hidden>
+<button type="button" class="search-open" aria-haspopup="dialog"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="m11 11 4 4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg><span>Search</span><kbd>/</kbd></button>
+<dialog class="search-dialog" aria-label="Search">
+<div class="search-bar" role="search">
+<input type="search" class="search-input" placeholder="Search" aria-label="Search" role="combobox" aria-controls="search-results" aria-expanded="false" aria-autocomplete="list" autocomplete="off" spellcheck="false">
+<button type="button" class="search-close">Esc</button>
+</div>
+<p class="search-status" aria-live="polite"></p>
+<ul id="search-results" class="search-results" role="listbox" aria-label="Results"></ul>
+</dialog>
+</div>
 <button type="button" class="nav-toggle" aria-expanded="false" hidden>Menu</button>
 </header>
 

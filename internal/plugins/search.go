@@ -16,7 +16,9 @@ import (
 
 // Search writes /search-index.json: [{url, title, headings, text}] for
 // every page that is not a draft, with text cut to MaxTextLength bytes.
-// Code blocks are left out of the text.
+// headings are the page's level 2 to 6 headings as {id, text}. Code
+// blocks are left out of the text. The built-in theme's search box reads
+// this index.
 type Search struct {
 	MaxTextLength int `yaml:"maxTextLength"`
 
@@ -26,10 +28,15 @@ type Search struct {
 }
 
 type searchDoc struct {
-	URL      string   `json:"url"`
-	Title    string   `json:"title"`
-	Headings []string `json:"headings"`
-	Text     string   `json:"text"`
+	URL      string          `json:"url"`
+	Title    string          `json:"title"`
+	Headings []searchHeading `json:"headings"`
+	Text     string          `json:"text"`
+}
+
+type searchHeading struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
 }
 
 func (*Search) Name() string         { return "search" }
@@ -44,7 +51,7 @@ func (s *Search) Init(cfg map[string]any, site plugin.SiteInfo) error {
 
 func (s *Search) OnPageParsed(p *plugin.Page) error {
 	var text strings.Builder
-	headings := []string{}
+	headings := []searchHeading{}
 	_ = ast.Walk(p.AST, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
@@ -55,7 +62,9 @@ func (s *Search) OnPageParsed(p *plugin.Page) error {
 		case *ast.Heading:
 			h := strings.TrimSpace(content.PlainText(t, p.Source))
 			if t.Level > 1 {
-				headings = append(headings, h)
+				id, _ := t.AttributeString("id")
+				idb, _ := id.([]byte)
+				headings = append(headings, searchHeading{ID: string(idb), Text: h})
 			}
 			appendText(&text, h)
 			return ast.WalkSkipChildren, nil

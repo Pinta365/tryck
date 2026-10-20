@@ -74,8 +74,10 @@ type builder struct {
 	site    plugin.SiteInfo
 	styles  []string
 	theme   render.ThemeData
-	view    *siteView // frozen after indexing
-	pages   []*content.Page
+	// searchIndex is the search index's site path when search is on.
+	searchIndex string
+	view        *siteView // frozen after indexing
+	pages       []*content.Page
 }
 
 // Build runs the pipeline. It always returns a Site; check HasErrors.
@@ -114,6 +116,11 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	b.dc.Add(ds...)
 	b.plugins = set
 	b.styles = set.Stylesheets()
+	for _, p := range set.Plugins() {
+		if p.Name() == "search" {
+			b.searchIndex = "/search-index.json"
+		}
+	}
 	directives, ds := set.Directives()
 	b.dc.Add(ds...)
 
@@ -369,6 +376,7 @@ func (b *builder) render(p *content.Page) ([]byte, bool) {
 		Next:        b.view.next[p.URL],
 		Stylesheets: b.styles,
 		Theme:       b.theme,
+		SearchIndex: b.searchIndex,
 		Dev:         b.opts.Dev,
 	}
 	var buf bytes.Buffer
@@ -394,6 +402,7 @@ func (b *builder) renderNotFound(s *Site) {
 		Nav:         s.Nav,
 		Stylesheets: b.styles,
 		Theme:       b.theme,
+		SearchIndex: b.searchIndex,
 		Dev:         b.opts.Dev,
 	}
 	var buf bytes.Buffer

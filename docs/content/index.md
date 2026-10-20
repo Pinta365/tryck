@@ -10,7 +10,7 @@ tryck builds static documentation sites from Markdown. It is one Go binary with 
 
 - **Markdown plus directives**: admonitions, collapsible details and tabs that work without JavaScript.
 - **Clear errors**: every problem is printed as `file:line:col: severity[code]: message`, and a build reports all of them at once instead of stopping at the first.
-- **Correct output**: link and anchor checking, `.md` links rewritten to page URLs, clean URLs, sitemap, a search index, redirects and subpath deploys.
+- **Correct output**: link and anchor checking, `.md` links rewritten to page URLs, clean URLs, sitemap, search, redirects and subpath deploys.
 - **Fast**: parallel parsing and rendering; about 80 ms for 1,000 pages on a laptop.
 - **Themes**: configure the built-in theme or ship your own layouts, static files and defaults in a theme folder.
 - **Extensible without a build step**: add your own `:::` directives with a template, or plugins in JavaScript. Go plugins for everything else.

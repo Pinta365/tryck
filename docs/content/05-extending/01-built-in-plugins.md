@@ -22,7 +22,7 @@ An unknown option in a plugin section is a `config.unknownKey` warning, and an u
 | `syntaxHighlighting` | `theme`, `darkTheme`, `lineNumbers` | `github`, `github-dark`, `true` | Highlights code and writes `/css/chroma.css`. |
 | `linkCheck` | `failOnBroken` | `true` | Checks internal links and anchors. |
 | `sitemap` | — | on | Writes `/sitemap.xml`. |
-| `search` | `maxTextLength` | `5000` | Writes `/search-index.json`. |
+| `search` | `maxTextLength` | `5000` | Adds the search box and writes `/search-index.json`. |
 | `redirects` | — | on | Writes a redirect page per front matter alias. |
 | `mermaid` | `url` | jsDelivr mermaid 11 | Draws ` ```mermaid ` blocks. |
 
@@ -48,13 +48,13 @@ Writes `/sitemap.xml` with an absolute URL for every page that is not a draft. I
 
 ## search
 
-Writes `/search-index.json`, an array of `{url, title, headings, text}` for every non-draft page. Code blocks are left out of the text, which is truncated to `maxTextLength` bytes. The built-in theme has no search box yet; a custom layout can load the index:
+Adds a search box to the header of the built-in theme, and writes the index it searches, `/search-index.json`.
 
-```html
-<script>
-fetch("{{ relURL "/search-index.json" }}").then((r) => r.json()).then((pages) => { /* ... */ });
-</script>
-```
+The box opens with the **Search** button, `/` or Ctrl+K (⌘K on a Mac), and Esc closes it. The index is fetched the first time the box opens; after that every search runs in the browser, with no server and no external service. A page matches when every word of the query appears in its title, headings or text, ignoring case and accents. Title matches rank first, then headings, then the text, and a result links straight to a heading that contains all the words. Without JavaScript there is no search button.
+
+The index is an array of `{url, title, headings, text}` for every page that is not a draft. `headings` lists the page's level 2 to 6 headings as `{id, text}`. Code blocks are left out of the text, which is cut to `maxTextLength` bytes (default `5000`).
+
+`enabled: false` removes both the index and the search box. A custom header shows the box with `{{ partial "search" . }}`; see [Layouts and templates](../04-themes/03-layouts-and-templates.md).
 
 ## redirects
 

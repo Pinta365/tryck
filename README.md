@@ -6,7 +6,7 @@ Documentation: <https://tryck.pinta.land/>.
 
 - **Plain Markdown plus `:::` directives**: admonitions, collapsible details and tabs that work without JavaScript.
 - **Clear errors**: every problem is reported as `file:line:col: severity[code]: message`, and the build reports all of them at once.
-- **Correct docs output**: link and anchor checking, `.md` links rewritten to page URLs, clean URLs, sitemap, search index, redirects, and subpath deploys such as GitHub Pages project sites.
+- **Correct docs output**: link and anchor checking, `.md` links rewritten to page URLs, clean URLs, sitemap, search, redirects, and subpath deploys such as GitHub Pages project sites.
 - **Fast**: parallel parsing and rendering; about 80 ms for 1,000 pages on a laptop.
 - **Themes**: configure the built-in theme (accent, logo, light/dark, header links, footer, extra CSS) or package your own in a theme folder.
 - **Extensible without a build step**: custom `:::` directives from templates and plugins in JavaScript, run by the stock binary. Go plugins for everything else.
@@ -134,7 +134,7 @@ Plugins are compiled in and hook into the build phases through the public API in
 | syntaxHighlighting | `plugins.syntaxHighlighting` | chroma highlighting with CSS classes; `theme` for light and `darkTheme` for dark mode, in `/css/chroma.css` |
 | linkCheck | `plugins.linkCheck` | Broken link and anchor diagnostics |
 | sitemap | `plugins.sitemap` | `/sitemap.xml` |
-| search | `plugins.search` | `/search-index.json` |
+| search | `plugins.search` | A search box in the header, and `/search-index.json` |
 | redirects | | A redirect page for each `aliases` entry |
 | mermaid | `plugins.mermaid` | ` ```mermaid ` blocks drawn as diagrams; the script loads from `url` (jsDelivr by default) only on pages that use it |
 
