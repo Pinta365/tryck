@@ -17,7 +17,7 @@ type siteView struct {
 	site       plugin.SiteInfo
 	prev, next map[string]*plugin.PageInfo // nav order
 	copied     map[string]bool             // output paths of assets and static files
-	outputs    map[string][]byte           // generated files; only grows in stage 5
+	outputs    map[string][]byte           // generated files; only grows while finalizing
 }
 
 func newSiteView(s *Site, site plugin.SiteInfo, staticFiles []string) *siteView {

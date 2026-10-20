@@ -48,8 +48,8 @@ type fenced interface {
 }
 
 // Admonition is :::note, :::tip, :::info, :::warning or :::danger.
-// The spec's Kind field is called Variant here, since goldmark nodes
-// already have Kind and Type methods.
+// The kind is called Variant because goldmark nodes already have Kind
+// and Type methods.
 type Admonition struct {
 	ast.BaseBlock
 	fence

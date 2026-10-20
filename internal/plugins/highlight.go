@@ -66,9 +66,7 @@ func (h *Highlight) OnBuildComplete(_ plugin.SiteView, out plugin.Outputs) error
 	if err := f.WriteCSS(&dark, styles.Get(h.DarkTheme)); err != nil {
 		return err
 	}
-	// Each theme only applies in its own mode. Themes style different
-	// token classes, so unscoped light rules would leak into dark mode
-	// wherever the dark theme has no rule (and the other way round).
+	// Scope each theme to its own mode, so no rule applies in both.
 	var buf bytes.Buffer
 	for _, mode := range []struct{ name, theme, css, other string }{
 		{"light", h.Theme, light.String(), "dark"},

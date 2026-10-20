@@ -1,14 +1,12 @@
 // Package plugin is tryck's public plugin API.
 //
-// Plugins are compiled into the binary and registered in
-// internal/plugins/registry.go. Every plugin implements Plugin plus any
-// of the phase interfaces below; the build calls each phase for every
-// plugin that implements it, ordered by Priority (lower first, default
-// 100) and then by Name.
+// Plugins are compiled into a custom binary with tryck.Main (package
+// pkg/tryck). Every plugin implements Plugin plus any of the phase
+// interfaces below. A build parses every page, then renders every page,
+// then finalizes once; each phase calls the plugins that implement it,
+// ordered by Priority (lower first, default 100) and then by Name.
 //
-// The data plugins see is kept small and serializable so that an
-// out-of-process bridge (JSON over stdin/stdout, or Wasm) can be added
-// later without changing these shapes.
+// Plugins see copies and read-only views, never the build's own state.
 package plugin
 
 import (
@@ -34,7 +32,7 @@ type Ordered interface{ Priority() int }
 // DefaultPriority applies to plugins that do not implement Ordered.
 const DefaultPriority = 100
 
-// PageParser runs in stage 2, per page and in parallel, after the page's
+// PageParser runs per page and in parallel, after the page's
 // Markdown is parsed. It may modify its own page only, and must not
 // modify p.AST: tryck dev reuses parsed ASTs between builds. Change the
 // document with a MarkdownExtender (an AST transformer) instead.
@@ -42,14 +40,14 @@ type PageParser interface {
 	OnPageParsed(p *Page) error
 }
 
-// PageRenderer runs in stage 4, per page and in parallel, after the
+// PageRenderer runs per page and in parallel, after the
 // layout has been executed. It may modify p.HTML and p.Data. The site
 // is read-only.
 type PageRenderer interface {
 	OnPageRendered(p *Page, s SiteView) error
 }
 
-// Finalizer runs once in stage 5, after every page is rendered. It may
+// Finalizer runs once, after every page is rendered. It may
 // add output files.
 type Finalizer interface {
 	OnBuildComplete(s SiteView, out Outputs) error
@@ -125,7 +123,7 @@ type Page struct {
 	AST        ast.Node       // goldmark document; read-only for plugins
 	Source     []byte         // body without front matter
 	BodyLine   int            // file line on which Source starts
-	HTML       []byte         // the rendered page, set in stage 4
+	HTML       []byte         // the rendered page, set after the layout runs
 	Diags      Reporter       // per-page diagnostics
 }
 
@@ -179,7 +177,7 @@ type PageInfo struct {
 	TitleInBody bool           // the body has its own h1, so layouts skip theirs
 	Aliases     []string       // old URLs that redirect here
 	Params      map[string]any // front matter keys tryck does not know
-	Data        map[string]any // plugin-added values as of the end of stage 2
+	Data        map[string]any // plugin-added values as of the end of parsing
 }
 
 // NavNode is an entry in the navigation tree. The tree is shared and

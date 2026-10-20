@@ -44,7 +44,7 @@ type Site struct {
 	Config  *config.Config
 	Pages   []*content.Page // sorted by URL
 	ByURL   map[string]*content.Page
-	Nav     *nav.Node                      // read-only after stage 3
+	Nav     *nav.Node                      // read-only after indexing
 	Anchors map[string]map[string]struct{} // URL -> set of element IDs
 	Assets  []content.Asset                // files from contentDir copied next to pages
 	Outputs map[string][]byte              // output path -> bytes (pages + generated files)
@@ -73,7 +73,7 @@ type builder struct {
 	site    plugin.SiteInfo
 	styles  []string
 	theme   render.ThemeData
-	view    *siteView // frozen after stage 3
+	view    *siteView // frozen after indexing
 	pages   []*content.Page
 }
 

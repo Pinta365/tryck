@@ -1,6 +1,6 @@
 // Package nav builds the navigation tree that mirrors contentDir.
 //
-// The tree is built once per build (stage 3) and never modified after.
+// The tree is built once per build and never modified after.
 // Per-page views with Active/InPath flags are made by ForPage, which
 // copies only the nodes on the path to the page and shares the rest.
 package nav

@@ -1,6 +1,6 @@
 # Release with: git tag vX.Y.Z && git push --tags (see .github/workflows/release.yml).
 # Archive names have no version, so deploy pipelines can use
-# releases/download/<tag>/tryck_linux_amd64.tar.gz (spec §13).
+# releases/latest/download/tryck_linux_amd64.tar.gz.
 version: 2
 project_name: tryck
 

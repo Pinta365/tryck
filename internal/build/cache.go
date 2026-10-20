@@ -14,7 +14,7 @@ import (
 // unchanged pages skip goldmark parsing. A Cache is tied to one config:
 // create a new one when the config changes.
 //
-// Cached ASTs are only modified in stage 2 of a build, and only by link
+// Cached ASTs are only modified while parsing, and only by link
 // rewriting, which re-applies from the original destinations each time.
 // One build at a time may use a Cache.
 type Cache struct {

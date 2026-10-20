@@ -15,8 +15,8 @@ import (
 
 // LinkCheck reports internal links to pages or files that do not exist
 // (link.broken) and #fragments missing on their target page
-// (link.anchor). Links are recorded per page in stage 2, after tryck has
-// rewritten them to site URLs, and checked once every page is known.
+// (link.anchor). Links are recorded per page while parsing, after tryck
+// has rewritten them to site URLs, and checked once every page is known.
 type LinkCheck struct {
 	FailOnBroken bool `yaml:"failOnBroken"`
 
