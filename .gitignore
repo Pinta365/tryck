@@ -1,5 +1,6 @@
 /dist/
+/docs/dist/
 /tryck
 *.test
 *.out
-/docs/
+/local_dev/

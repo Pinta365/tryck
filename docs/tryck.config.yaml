@@ -1,0 +1,12 @@
+site:
+  title: tryck
+  description: A single-binary static site generator for technical documentation.
+  baseUrl: "https://pinta365.github.io/tryck/"
+
+theme:
+  accent: "#0b7a5a"
+  nav:
+    - title: GitHub
+      url: https://github.com/Pinta365/tryck
+  footer: "MIT licensed. Built with [tryck](https://github.com/Pinta365/tryck)."
+  css: [/css/docs.css]

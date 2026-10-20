@@ -7,7 +7,7 @@ description: Install tryck and build this site.
 
 tryck is one static binary with no runtime dependencies. Download it for your platform from the [releases page](https://github.com/Pinta365/tryck/releases).
 
-::::tabs{group=os}
+:::tabs{group=os}
 @tab Linux
 ```sh
 curl -sSL https://github.com/Pinta365/tryck/releases/latest/download/tryck_linux_amd64.tar.gz | tar xz tryck
@@ -18,7 +18,7 @@ curl -sSL https://github.com/Pinta365/tryck/releases/latest/download/tryck_darwi
 ```
 @tab Windows
 Download `tryck_windows_amd64.zip` and put `tryck.exe` on your `PATH`.
-::::
+:::
 
 ## Build
 

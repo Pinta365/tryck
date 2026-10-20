@@ -2,6 +2,8 @@
 
 A single-binary static site generator for technical documentation, written in Go. *Tryck* is Swedish for "print".
 
+Documentation: <https://pinta365.github.io/tryck/>.
+
 - **Plain Markdown plus `:::` directives**: admonitions, collapsible details and tabs that work without JavaScript.
 - **Clear errors**: every problem is reported as `file:line:col: severity[code]: message`, and the build reports all of them at once.
 - **Correct docs output**: link and anchor checking, `.md` links rewritten to page URLs, clean URLs, sitemap, search index, redirects, and subpath deploys such as GitHub Pages project sites.
@@ -58,7 +60,7 @@ Directives:
 Any **Markdown**.
 :::
 
-::::tabs{group=lang}
+:::tabs{group=lang}
 @tab Go
 ```go
 x := 1
@@ -67,7 +69,7 @@ x := 1
 ```ts
 const x = 1;
 ```
-::::
+:::
 ````
 
 ## Themes
@@ -102,6 +104,10 @@ Files are looked up in the site first, then the theme, then the built-in theme: 
 ## Layouts
 
 Layouts are Go `html/template` files; see the built-in set in [internal/render/layouts](internal/render/layouts). Templates get `.Site`, `.Page`, `.Content`, `.Nav`, `.TOC`, `.Prev`, `.Next` and `.Theme`, and the functions `relURL`, `absURL`, `dateFormat`, `markdownify`, `slugify`, `partial`, `default`, `dict` and `jsonify`.
+
+## Custom directives
+
+A template in `layouts/directives/` adds a directive: `layouts/directives/card.html` renders `:::card[Title]{href="/guide/"}` blocks, with the title, attributes and rendered body as template data. No code or build step. See [Custom directives](https://pinta365.github.io/tryck/extending/custom-directives/).
 
 ## Plugins
 
@@ -153,7 +159,7 @@ func (h *Hello) OnPageParsed(p *plugin.Page) error {
 func main() { tryck.Main(&Hello{}) }
 ```
 
-Build it with `go build`, for example `go build ./examples/plugin-hello`. See [`examples/plugin-hello`](examples/plugin-hello) for a complete, tested plugin. `ConfigKeys` is optional; declaring it turns typos in the plugin's section into `config.unknownKey` warnings.
+Build it with `go build`, for example `go build ./examples/plugin-hello`. See [`examples/plugin-hello`](examples/plugin-hello) for a complete, tested plugin, and [Using plugins](https://pinta365.github.io/tryck/extending/go-plugins/using-go-plugins/) for setting up a site with a custom binary. `ConfigKeys` is optional; declaring it turns typos in the plugin's section into `config.unknownKey` warnings.
 
 ## Deploying
 
