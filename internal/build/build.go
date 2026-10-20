@@ -31,6 +31,7 @@ import (
 	"github.com/Pinta365/tryck/internal/nav"
 	"github.com/Pinta365/tryck/internal/plugins"
 	"github.com/Pinta365/tryck/internal/render"
+	"github.com/Pinta365/tryck/internal/scripts"
 	"github.com/Pinta365/tryck/internal/workpool"
 	"github.com/Pinta365/tryck/pkg/plugin"
 )
@@ -103,7 +104,13 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	}
 
 	// [1] Load
-	set, ds := plugins.Load(cfg, b.site, opts.Plugins...)
+	var scriptDirs []scripts.Dir
+	for _, d := range cfg.PluginDirs() {
+		scriptDirs = append(scriptDirs, scripts.Dir{Path: d, Label: b.rel(d)})
+	}
+	scripted, ds := scripts.Load(scriptDirs)
+	b.dc.Add(ds...)
+	set, ds := plugins.Load(cfg, b.site, slices.Concat(opts.Plugins, scripted)...)
 	b.dc.Add(ds...)
 	b.plugins = set
 	b.styles = set.Stylesheets()

@@ -55,6 +55,7 @@ type BuildConfig struct {
 	OutputDir   string `yaml:"outputDir"`
 	StaticDir   string `yaml:"staticDir"`
 	LayoutsDir  string `yaml:"layoutsDir"`
+	PluginsDir  string `yaml:"pluginsDir"`
 	CleanOutput bool   `yaml:"cleanOutput"`
 	Drafts      bool   `yaml:"drafts"`
 	UnsafeHTML  bool   `yaml:"unsafeHTML"`
@@ -101,6 +102,7 @@ func Defaults() *Config {
 			OutputDir:   "./dist",
 			StaticDir:   "./static",
 			LayoutsDir:  "./layouts",
+			PluginsDir:  "./plugins",
 			CleanOutput: true,
 		},
 		Defaults: DefaultsConfig{
@@ -248,6 +250,12 @@ func (c *Config) LayoutDirs() []string {
 // theme's static/, then the site's staticDir.
 func (c *Config) StaticDirs() []string {
 	return c.layered("static", c.Build.StaticDir)
+}
+
+// PluginDirs lists the script plugin directories, lowest priority first:
+// the theme's plugins/, then the site's pluginsDir.
+func (c *Config) PluginDirs() []string {
+	return c.layered("plugins", c.Build.PluginsDir)
 }
 
 func (c *Config) layered(themeSub, siteDir string) []string {
@@ -413,6 +421,7 @@ func (c *Config) Validate() []diag.Diagnostic {
 		"build.outputDir":  c.Build.OutputDir,
 		"build.staticDir":  c.Build.StaticDir,
 		"build.layoutsDir": c.Build.LayoutsDir,
+		"build.pluginsDir": c.Build.PluginsDir,
 	} {
 		if strings.TrimSpace(dir) == "" {
 			bad("%s must not be empty", name)

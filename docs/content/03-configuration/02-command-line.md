@@ -49,7 +49,7 @@ Two settings are overridden in dev, after the config is loaded:
 - `build.drafts` is forced to `true`, so drafts are visible while you write.
 - `site.baseUrl` is set to `http://<host>:<port>/`, so links point at the dev server.
 
-The dev server watches `content/`, `layouts/`, `static/` and the theme folder. A port outside `1`–`65535` is an error.
+The dev server watches `content/`, `layouts/`, `static/`, `plugins/`, the config file and the theme folder. A port outside `1`–`65535` is an error.
 
 ## init
 

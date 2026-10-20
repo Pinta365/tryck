@@ -27,7 +27,7 @@ Report security problems privately with the **Report a vulnerability** button on
 
 ## Development
 
-Building and testing needs Go 1.23 or later.
+Building and testing needs Go 1.26 or later.
 
 ```sh
 go test -race ./...                      # all tests

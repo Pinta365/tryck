@@ -33,7 +33,7 @@ Releases are published for Linux amd64 and arm64, macOS arm64 and Windows amd64.
 
 ## Install with Go
 
-With Go 1.23 or later you can install straight from the module:
+With Go 1.26 or later you can install straight from the module:
 
 ```sh
 go install github.com/Pinta365/tryck/cmd/tryck@latest

@@ -9,6 +9,7 @@ Documentation: <https://pinta365.github.io/tryck/>.
 - **Correct docs output**: link and anchor checking, `.md` links rewritten to page URLs, clean URLs, sitemap, search index, redirects, and subpath deploys such as GitHub Pages project sites.
 - **Fast**: parallel parsing and rendering; about 80 ms for 1,000 pages on a laptop.
 - **Themes**: configure the built-in theme (accent, logo, light/dark, header links, footer, extra CSS) or package your own in a theme folder.
+- **Extensible without a build step**: custom `:::` directives from templates and plugins in JavaScript, run by the stock binary. Go plugins for everything else.
 - **Live reload**: `tryck dev` rebuilds in memory, reloads the browser and shows build errors as an overlay.
 - **No runtime dependencies**: one static binary, no Node or Python in CI.
 
@@ -21,7 +22,7 @@ tryck dev            # http://127.0.0.1:8080/
 tryck build          # writes dist/
 ```
 
-Download a binary for Linux, macOS or Windows from the [releases page](https://github.com/Pinta365/tryck/releases), or build from source with Go 1.23 or later:
+Download a binary for Linux, macOS or Windows from the [releases page](https://github.com/Pinta365/tryck/releases), or build from source with Go 1.26 or later:
 
 ```sh
 go install github.com/Pinta365/tryck/cmd/tryck@latest
@@ -109,6 +110,19 @@ Layouts are Go `html/template` files; see the built-in set in [internal/render/l
 
 A template in `layouts/directives/` adds a directive: `layouts/directives/card.html` renders `:::card[Title]{href="/guide/"}` blocks, with the title, attributes and rendered body as template data. No code or build step. See [Custom directives](https://pinta365.github.io/tryck/extending/custom-directives/).
 
+## Script plugins
+
+A JavaScript file in `plugins/` is a plugin, run by the stock binary with nothing to install. Scripts have the same hooks as Go plugins: add data to pages, change the rendered HTML, write extra files and report diagnostics. See [Script plugins](https://pinta365.github.io/tryck/extending/script-plugins/).
+
+```js
+// plugins/todo.js: warn about unfinished pages
+function onPageParsed(page) {
+  page.source.split("\n").forEach((text, i) => {
+    if (text.includes("TODO")) page.report("warning", "unfinished section", i + 1);
+  });
+}
+```
+
 ## Plugins
 
 Plugins are compiled in and hook into the build phases through the public API in [`pkg/plugin`](pkg/plugin). The built-ins use the same API:
@@ -124,7 +138,7 @@ Plugins are compiled in and hook into the build phases through the public API in
 | redirects | | A redirect page for each `aliases` entry |
 | mermaid | `plugins.mermaid` | ` ```mermaid ` blocks drawn as diagrams; the script loads from `url` (jsDelivr by default) only on pages that use it |
 
-### Writing a plugin
+### Writing a Go plugin
 
 A plugin is a Go type implementing `plugin.Plugin` plus any of the phase interfaces in [`pkg/plugin`](pkg/plugin). Custom binaries compile plugins in and hand them to `tryck.Main`:
 

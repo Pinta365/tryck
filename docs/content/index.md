@@ -31,4 +31,4 @@ tryck build
 - [Command line](03-configuration/02-command-line.md) — every command and flag.
 - [Writing pages](02-writing/01-pages-and-urls.md) — how files become URLs.
 - [Configuration](03-configuration/01-config-file.md) — every config key.
-- [Extending tryck](05-extending/02-custom-directives.md) — custom directives from templates, and Go plugins.
+- [Extending tryck](05-extending/02-custom-directives.md) — custom directives from templates, JavaScript plugins and Go plugins.

@@ -29,7 +29,7 @@ The starter contains:
 tryck dev
 ```
 
-This builds the site into memory and serves it at `http://127.0.0.1:8080/`. It watches `content/`, `layouts/`, `static/` and the theme folder, rebuilds on every change and reloads the browser over a WebSocket. Build problems appear as an overlay instead of breaking the page.
+This builds the site into memory and serves it at `http://127.0.0.1:8080/`. It watches `content/`, `layouts/`, `static/`, `plugins/` and the theme folder, rebuilds on every change and reloads the browser over a WebSocket. Build problems appear as an overlay instead of breaking the page.
 
 `tryck dev` always includes draft pages and points the site at its own address, so it ignores `draft` and `baseUrl` in the config. Use `--port`, `--host` and `--open` to change where it listens. See [Command line](../03-configuration/02-command-line.md) for the flags.
 

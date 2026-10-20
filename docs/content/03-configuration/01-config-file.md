@@ -19,6 +19,7 @@ build:
   outputDir: "./dist"
   staticDir: "./static"
   layoutsDir: "./layouts"
+  pluginsDir: "./plugins"
   cleanOutput: true
   drafts: false
   unsafeHTML: false
@@ -92,6 +93,7 @@ Setting one option of a plugin does not drop its other defaults; plugin sections
 | `outputDir` | string | `"./dist"` | Where `tryck build` writes the site. |
 | `staticDir` | string | `"./static"` | Files copied to the site root unchanged. |
 | `layoutsDir` | string | `"./layouts"` | Layout overrides. |
+| `pluginsDir` | string | `"./plugins"` | [Script plugins](../05-extending/03-script-plugins.md). |
 | `cleanOutput` | bool | `true` | Empty the output directory before writing. |
 | `drafts` | bool | `false` | Include pages with `draft: true`. |
 | `unsafeHTML` | bool | `false` | Pass raw HTML in Markdown through instead of replacing it with a comment. |

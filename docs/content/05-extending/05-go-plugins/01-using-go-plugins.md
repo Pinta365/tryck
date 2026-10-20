@@ -5,7 +5,7 @@ description: Build your own tryck binary with extra plugins and use it for a sit
 
 The `tryck` binary from the releases page contains only the [built-in plugins](../01-built-in-plugins.md). Plugins are compiled in, so to use another plugin you build your own binary: a short Go program that calls `tryck.Main` with the plugins you want. It has every tryck command, and the plugins run next to the built-ins.
 
-You need Go 1.23 or later.
+You need Go 1.26 or later.
 
 ## Set up the binary
 

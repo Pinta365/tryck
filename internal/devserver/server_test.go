@@ -133,6 +133,14 @@ func TestReloadOnChange(t *testing.T) {
 		t.Errorf("GET /guide/new/ = %d", code)
 	}
 
+	// A new or changed script plugin rebuilds, even when plugins/ did
+	// not exist at start.
+	e.write("plugins/mark.js", "function onPageRendered(page) { page.html = page.html.replace('Changed', 'Scripted'); }\n")
+	e.expectReload()
+	if _, body := e.get("/"); !strings.Contains(body, "Scripted") {
+		t.Errorf("script plugin not applied:\n%s", body)
+	}
+
 	// Static files are served from disk and reload without a rebuild.
 	builds := e.srv.builds.Load()
 	e.write("static/style.css", "body{color:red}")

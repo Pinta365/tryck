@@ -18,6 +18,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -123,7 +124,7 @@ func (s *Server) Done() <-chan struct{} { return s.done }
 
 func (s *Server) watchRoots() error {
 	c := s.cfg
-	dirs := []string{c.Dir(c.Build.ContentDir), c.Dir(c.Build.LayoutsDir), c.Dir(c.Build.StaticDir)}
+	dirs := []string{c.Dir(c.Build.ContentDir), c.Dir(c.Build.LayoutsDir), c.Dir(c.Build.StaticDir), c.Dir(c.Build.PluginsDir)}
 	if t := c.ThemeDir(); t != "" {
 		dirs = append(dirs, t)
 	}
@@ -198,7 +199,7 @@ func (s *Server) classify(name string) change {
 	if t := c.ThemeDir(); t != "" && under(filepath.Join(t, config.ThemeFile)) {
 		return changeConfig
 	}
-	for _, d := range append(c.LayoutDirs(), c.Dir(c.Build.ContentDir)) {
+	for _, d := range slices.Concat(c.LayoutDirs(), c.PluginDirs(), []string{c.Dir(c.Build.ContentDir)}) {
 		if under(d) {
 			return changeContent
 		}

@@ -14,7 +14,8 @@ theme:
 themes/acme/
 ├── theme.yaml      defaults for the theme section
 ├── layouts/        layout files, by name
-└── static/         files copied to the site root
+├── static/         files copied to the site root
+└── plugins/        script plugins
 ```
 
 The path must be a directory; anything else is a `config.invalid` error.
@@ -35,7 +36,7 @@ Settings in `tryck.config.yaml` win over `theme.yaml` key by key, so a site can 
 
 ## Lookup order
 
-For both layouts and static files, tryck looks in this order, later entries winning:
+For layouts, static files and script plugins, tryck looks in this order, later entries winning:
 
 1. the built-in theme,
 2. the theme folder (if `theme.path` is set),

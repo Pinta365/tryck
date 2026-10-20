@@ -11,6 +11,7 @@ my-docs/
 ├── content/             Markdown pages and their assets
 ├── static/              files copied to the site root
 ├── layouts/             template overrides (optional)
+├── plugins/             script plugins (optional)
 ├── themes/              theme folders (optional)
 └── dist/                build output (written by tryck build)
 ```
@@ -37,6 +38,10 @@ Files in `static/` are copied to the site root unchanged. Use it for `robots.txt
 ## layouts/
 
 Optional `html/template` files that override the built-in layouts file by file. A file named `layouts/doc.html` replaces the built-in `doc` layout; `layouts/partials/header.html` replaces the header partial. Files not overridden keep their built-in version. Templates in `layouts/directives/` add [custom directives](../05-extending/02-custom-directives.md). See [Layouts and templates](../04-themes/03-layouts-and-templates.md).
+
+## plugins/
+
+Optional JavaScript files, one plugin each, that add data to pages, change their HTML or write extra files. See [Script plugins](../05-extending/03-script-plugins.md).
 
 ## themes/
 
