@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -290,8 +291,8 @@ func TestThemeDefaults(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write("themes/acme/theme.yaml", "accent: red\nlogo: /logo.svg\ncolorScheme: dark\nnav:\n  - title: A\n    url: /a/\n    target: x\nfooter: theme\n")
-	write("tryck.config.yaml", "theme:\n  path: themes/acme\n  accent: \"#00ff00\"\n  footer: site\n")
+	write("themes/acme/theme.yaml", "accent: red\nlogo: /logo.svg\ncolorScheme: dark\nnav:\n  - title: A\n    url: /a/\n    target: x\nfooter: theme\ncss: [/css/acme.css, /css/shared.css]\n")
+	write("tryck.config.yaml", "theme:\n  path: themes/acme\n  accent: \"#00ff00\"\n  footer: site\n  css: [/css/shared.css, /css/site.css]\n")
 
 	cfg, ds := Load(filepath.Join(root, "tryck.config.yaml"), true)
 	if len(ds) != 1 || ds[0].Code != "config.unknownKey" || ds[0].File != "themes/acme/theme.yaml" || ds[0].Line != 7 || !strings.Contains(ds[0].Message, `"nav[0].target"`) {
@@ -300,6 +301,9 @@ func TestThemeDefaults(t *testing.T) {
 	th := cfg.Theme
 	if th.Accent != "#00ff00" || th.Footer != "site" || th.Logo != "/logo.svg" || th.ColorScheme != "dark" || len(th.Nav) != 1 || th.Path != "themes/acme" {
 		t.Errorf("merged theme = %+v", th)
+	}
+	if got, want := th.CSS, []string{"/css/acme.css", "/css/shared.css", "/css/site.css"}; !slices.Equal(got, want) {
+		t.Errorf("css = %v, want the theme's, then the site's, without duplicates: %v", got, want)
 	}
 	if got := cfg.LayoutDirs(); len(got) != 2 || got[0] != filepath.Join(root, "themes/acme/layouts") || got[1] != filepath.Join(root, "layouts") {
 		t.Errorf("LayoutDirs = %v", got)

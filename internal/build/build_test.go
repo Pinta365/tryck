@@ -329,3 +329,17 @@ func TestDirectiveDiagnosticsUseFileLines(t *testing.T) {
 		t.Errorf("want directive.unknown warning at content/b.md:1, got %v", site.Diags)
 	}
 }
+
+func TestHeadAndBodyEndPartials(t *testing.T) {
+	site := mustBuild(t, writeSite(t, map[string]string{
+		"layouts/partials/head-end.html": `{{ if not .Dev }}<script defer src="/a.js"></script>{{ end }}`,
+		"layouts/partials/body-end.html": `<script>end()</script>`,
+		"content/a.md":                   "# A\n",
+	}))
+	for _, path := range []string{"a/index.html", build.NotFoundPath} {
+		html := string(site.Outputs[path])
+		if !strings.Contains(html, "<script defer src=\"/a.js\"></script>\n</head>") || !strings.Contains(html, "<script>end()</script>\n</body>") {
+			t.Errorf("%s: partials not at the end of head and body:\n%s", path, html)
+		}
+	}
+}

@@ -24,6 +24,7 @@
 {{- if eq .Theme.ColorScheme "auto" }}
 <script>try { const t = localStorage.getItem("tryck-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
 {{- end }}
+{{- partial "head-end" . }}
 </head>
 <body>
 {{ partial "header" . }}
@@ -134,5 +135,6 @@ document.querySelector(".theme-toggle")?.addEventListener("click", () => {
 })();
 </script>
 {{- end }}
+{{- partial "body-end" . }}
 </body>
 </html>

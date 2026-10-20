@@ -100,11 +100,11 @@ themes/acme/
 └── static/           # copied to the output root
 ```
 
-Files are looked up in the site first, then the theme, then the built-in theme: `layouts/partials/footer.html` in your site beats the theme's, which beats tryck's. Settings in `tryck.config.yaml` win over `theme.yaml` key by key. Custom values for a theme's templates go in `theme.params` and are available as `.Theme.Params`.
+Files are looked up in the site first, then the theme, then the built-in theme: `layouts/partials/footer.html` in your site beats the theme's, which beats tryck's. Settings in `tryck.config.yaml` win over `theme.yaml` key by key, except `css`: the site's stylesheets are added after the theme's. Custom values for a theme's templates go in `theme.params` and are available as `.Theme.Params`.
 
 ## Layouts
 
-Layouts are Go `html/template` files; see the built-in set in [internal/render/layouts](internal/render/layouts). Templates get `.Site`, `.Page`, `.Content`, `.Nav`, `.TOC`, `.Prev`, `.Next` and `.Theme`, and the functions `relURL`, `absURL`, `dateFormat`, `markdownify`, `slugify`, `partial`, `default`, `dict` and `jsonify`.
+Layouts are Go `html/template` files. To add analytics or other tags to every page, create `layouts/partials/head-end.html` or `body-end.html`; both are empty by default. See the built-in set in [internal/render/layouts](internal/render/layouts). Templates get `.Site`, `.Page`, `.Content`, `.Nav`, `.TOC`, `.Prev`, `.Next` and `.Theme`, and the functions `relURL`, `absURL`, `dateFormat`, `markdownify`, `slugify`, `partial`, `default`, `dict` and `jsonify`.
 
 ## Custom directives
 

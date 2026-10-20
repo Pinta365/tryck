@@ -9,6 +9,6 @@ theme:
     - title: GitHub
       url: https://github.com/Pinta365/tryck
   footer: "MIT licensed. Built with [tryck](https://github.com/Pinta365/tryck)."
-  css: [/css/pinta.css, /css/docs.css]  # the theme's stylesheet, then this site's
+  css: [/css/docs.css]
   params:
     brandSuffix: docs

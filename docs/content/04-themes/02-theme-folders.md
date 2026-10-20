@@ -34,7 +34,7 @@ params:
   repo: https://github.com/you/project
 ```
 
-Settings in `tryck.config.yaml` win over `theme.yaml` key by key, so a site can change the accent of a theme without restating anything else. A key that is not a theme setting produces a `config.unknownKey` warning.
+Settings in `tryck.config.yaml` win over `theme.yaml` key by key, so a site can change the accent of a theme without restating anything else. `css` is the exception: the site's stylesheets are linked after the theme's, so a site can add its own without dropping the theme's. A stylesheet listed in both is linked once. A key that is not a theme setting produces a `config.unknownKey` warning.
 
 ## Lookup order
 

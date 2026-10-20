@@ -123,7 +123,7 @@ The `theme` section configures the built-in theme and selects an optional theme 
 | `colorScheme` | string | `"auto"` | `auto` (follows the system, with a toggle), `light` or `dark`. |
 | `nav` | list | `[]` | Header links, each with `title` and `url` (both required). |
 | `footer` | string | `""` | Inline Markdown shown in the site footer. |
-| `css` | list | `[]` | Extra stylesheets, linked after the theme's. |
+| `css` | list | `[]` | Extra stylesheets, linked after the theme's. With a theme folder, they are added after the folder's own `css`. |
 | `params` | map | `{}` | Free-form values for custom themes, read as `.Theme.Params`. |
 
 `accent` and `accentDark` must be CSS colours: a hex value, a colour name, or a function such as `rgb(...)`. `colorScheme` must be `auto`, `light` or `dark`.

@@ -28,7 +28,7 @@ layout: landing
 
 ## Partials
 
-Shared fragments live in `partials/` and are called with the `partial` function. The built-in theme has `header`, `sidebar`, `toc` and `footer`.
+Shared fragments live in `partials/` and are called with the `partial` function. The built-in theme has `header`, `sidebar`, `toc` and `footer`, plus two empty ones for your own additions: `head-end` and `body-end` (see [Adding scripts and analytics](#adding-scripts-and-analytics)).
 
 ```html
 {{ partial "header" . }}
@@ -39,6 +39,23 @@ Shared fragments live in `partials/` and are called with the `partial` function.
 ```
 
 `partial` takes the partial's name (`.html` optional) and one optional data value. Without a value the partial receives `nil`.
+
+## Adding scripts and analytics
+
+Every page built with `baseof.html` includes two partials that are empty by default:
+
+- `partials/head-end.html`, at the end of `<head>`: analytics, web fonts, meta tags, favicons,
+- `partials/body-end.html`, at the end of `<body>`: scripts that should run after the page.
+
+Create the one you need in your site's `layouts/partials/`; nothing else has to be copied. For example, an analytics script that is left out while you run `tryck dev`:
+
+```html
+{{ if not .Dev }}
+<script defer src="https://analytics.example.com/script.js" data-site="docs.example.com"></script>
+{{ end }}
+```
+
+The partials get the same data as the layout, so they can check `.Page`, `.Site` or `.Theme.Params`. A theme folder can ship its own versions; a site's file replaces the theme's.
 
 ## Directive templates
 

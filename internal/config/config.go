@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -187,6 +188,8 @@ const ThemeFile = "theme.yaml"
 
 // applyThemeDefaults reads the theme folder's theme.yaml and lays the
 // site's theme section over it again, so site values win key by key.
+// css is the exception: the site's stylesheets are added after the
+// theme's, so a site can add one without dropping the theme's.
 func (c *Config) applyThemeDefaults(doc *yaml.Node) []diag.Diagnostic {
 	dir := c.ThemeDir()
 	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
@@ -216,9 +219,17 @@ func (c *Config) applyThemeDefaults(doc *yaml.Node) []diag.Diagnostic {
 		return dc.All()
 	}
 	base.Path = c.Theme.Path
+	themeCSS := base.CSS
 	if site := mapValue(doc, "theme"); site != nil {
 		_ = site.Decode(&base) // already decoded once without errors
 	}
+	var css []string
+	for _, s := range slices.Concat(themeCSS, base.CSS) {
+		if !slices.Contains(css, s) {
+			css = append(css, s)
+		}
+	}
+	base.CSS = css
 	c.Theme = base
 	return dc.All()
 }
