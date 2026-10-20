@@ -12,7 +12,7 @@ import (
 )
 
 // linkResolver rewrites Markdown link and image destinations to final
-// site URLs (spec §5.2, §11).
+// site URLs.
 //
 // Relative destinations resolve against the source file's directory,
 // the way an editor or GitHub shows them: "../setup.md#x" in

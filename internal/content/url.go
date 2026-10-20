@@ -47,7 +47,7 @@ func IsSectionIndex(rel string) bool {
 }
 
 // URLFor maps a Markdown file path, relative to contentDir and using
-// forward slashes, to its clean URL (spec §5.2):
+// forward slashes, to its clean URL:
 //
 //	docs/setup.md      -> /docs/setup/
 //	docs/_index.md     -> /docs/

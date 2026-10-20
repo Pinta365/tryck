@@ -16,7 +16,7 @@ type Sitemap struct {
 }
 
 func (*Sitemap) Name() string         { return "sitemap" }
-func (*Sitemap) configKeys() []string { return nil }
+func (*Sitemap) ConfigKeys() []string { return nil }
 
 func (s *Sitemap) Init(_ map[string]any, site plugin.SiteInfo) error {
 	s.site = site

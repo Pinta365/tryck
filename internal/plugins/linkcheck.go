@@ -40,7 +40,7 @@ func (*LinkCheck) Name() string { return "linkCheck" }
 
 // Priority runs the check after other finalizers have added their files.
 func (*LinkCheck) Priority() int        { return 1000 }
-func (*LinkCheck) configKeys() []string { return []string{"failOnBroken"} }
+func (*LinkCheck) ConfigKeys() []string { return []string{"failOnBroken"} }
 
 func (l *LinkCheck) Init(cfg map[string]any, site plugin.SiteInfo) error {
 	l.FailOnBroken = true

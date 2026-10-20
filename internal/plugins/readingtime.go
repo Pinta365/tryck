@@ -16,7 +16,7 @@ type ReadingTime struct {
 }
 
 func (*ReadingTime) Name() string         { return "readingTime" }
-func (*ReadingTime) configKeys() []string { return []string{"wordsPerMinute"} }
+func (*ReadingTime) ConfigKeys() []string { return []string{"wordsPerMinute"} }
 
 func (r *ReadingTime) Init(cfg map[string]any, _ plugin.SiteInfo) error {
 	r.WordsPerMinute = 200

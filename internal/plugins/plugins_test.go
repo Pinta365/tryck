@@ -225,6 +225,43 @@ func TestLoadErrors(t *testing.T) {
 	}
 }
 
+func TestLoadDuplicateName(t *testing.T) {
+	cfg := config.Defaults()
+	set, ds := Load(cfg, plugin.SiteInfo{}, &fake{name: "dup", priority: 1}, &fake{name: "dup", priority: 2})
+	if !diag.HasErrors(ds) || len(ds) != 1 || ds[0].Code != "plugin.config" || !strings.Contains(ds[0].Message, "dup: duplicate plugin name") {
+		t.Errorf("diagnostics = %v", ds)
+	}
+	n := 0
+	for _, p := range set.Plugins() {
+		if f, ok := p.(*fake); ok && f.name == "dup" {
+			n++
+			if f.priority != 1 {
+				t.Error("the later duplicate plugin was kept")
+			}
+		}
+	}
+	if n != 1 {
+		t.Errorf("enabled dup plugins = %d, want 1", n)
+	}
+}
+
+type fakeKeys struct {
+	fake
+	keys []string
+}
+
+func (f *fakeKeys) ConfigKeys() []string { return f.keys }
+
+func TestLoadThirdPartyConfigKeys(t *testing.T) {
+	cfg := config.Defaults()
+	cfg.Plugins["hello"] = map[string]any{"greeting": "Hej", "greetng": "x"}
+	_, ds := Load(cfg, plugin.SiteInfo{}, &fakeKeys{fake: fake{name: "hello"}, keys: []string{"greeting"}})
+	if len(ds) != 1 || ds[0].Severity != diag.Warning || ds[0].Code != "config.unknownKey" ||
+		!strings.Contains(ds[0].Message, `"plugins.hello.greetng"`) {
+		t.Errorf("diagnostics = %v", ds)
+	}
+}
+
 func TestDirectiveClaims(t *testing.T) {
 	cfg := config.Defaults()
 	set, _ := Load(cfg, plugin.SiteInfo{},

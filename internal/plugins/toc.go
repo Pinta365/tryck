@@ -18,7 +18,7 @@ type TOC struct {
 func (*TOC) Name() string                               { return "toc" }
 func (*TOC) Priority() int                              { return 10 }
 func (*TOC) Init(map[string]any, plugin.SiteInfo) error { return nil }
-func (*TOC) configKeys() []string                       { return nil }
+func (*TOC) ConfigKeys() []string                       { return nil }
 
 func (t *TOC) OnPageParsed(p *plugin.Page) error {
 	show := t.Default

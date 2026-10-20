@@ -1,5 +1,5 @@
 // Package tryck holds files embedded in the tryck binary. The command
-// lives in cmd/tryck and the public plugin API in pkg/plugin.
+// line lives in pkg/tryck and the public plugin API in pkg/plugin.
 package tryck
 
 import (

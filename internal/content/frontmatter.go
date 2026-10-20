@@ -13,7 +13,7 @@ import (
 	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
-// FrontMatter is the YAML header of a page (spec §5.1).
+// FrontMatter is the YAML header of a page.
 type FrontMatter = plugin.FrontMatter
 
 var utf8BOM = []byte("\xef\xbb\xbf")

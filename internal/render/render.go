@@ -48,7 +48,7 @@ type SiteInfo = plugin.SiteInfo
 // PageInfo is the per-page data available to templates.
 type PageInfo = plugin.PageInfo
 
-// TemplateData is the dot value of every layout (spec §9.2).
+// TemplateData is the dot value of every layout.
 type TemplateData struct {
 	Site        SiteInfo
 	Page        *PageInfo
@@ -239,7 +239,7 @@ type FuncOptions struct {
 	Markdownify func(string) (string, error) // inline Markdown to HTML
 }
 
-// Funcs returns the template functions (spec §9.3). "partial" is bound
+// Funcs returns the template functions. "partial" is bound
 // to each layout's template set by Load.
 func Funcs(o FuncOptions) template.FuncMap {
 	return template.FuncMap{

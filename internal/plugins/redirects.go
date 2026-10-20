@@ -16,7 +16,7 @@ type Redirects struct {
 }
 
 func (*Redirects) Name() string         { return "redirects" }
-func (*Redirects) configKeys() []string { return nil }
+func (*Redirects) ConfigKeys() []string { return nil }
 
 func (r *Redirects) Init(_ map[string]any, site plugin.SiteInfo) error {
 	r.site = site

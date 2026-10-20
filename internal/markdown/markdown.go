@@ -21,7 +21,7 @@ import (
 // Options configures the Markdown processor.
 type Options struct {
 	// UnsafeHTML passes raw HTML in Markdown through. Otherwise it is
-	// replaced by an HTML comment (spec §9.4).
+	// replaced by an HTML comment.
 	UnsafeHTML bool
 	// Extenders add goldmark extensions, such as syntax highlighting.
 	Extenders []plugin.MarkdownExtender

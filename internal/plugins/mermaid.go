@@ -28,7 +28,7 @@ type Mermaid struct {
 const DefaultMermaidURL = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"
 
 func (*Mermaid) Name() string         { return "mermaid" }
-func (*Mermaid) configKeys() []string { return []string{"url"} }
+func (*Mermaid) ConfigKeys() []string { return []string{"url"} }
 
 func (m *Mermaid) Init(cfg map[string]any, _ plugin.SiteInfo) error {
 	m.URL = DefaultMermaidURL

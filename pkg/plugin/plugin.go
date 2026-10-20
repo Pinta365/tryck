@@ -78,6 +78,11 @@ type Stylesheets interface {
 	Stylesheets() []string
 }
 
+// ConfigKeys is implemented by plugins that declare their config keys,
+// so typos in their section produce config.unknownKey warnings.
+// "enabled" is always allowed.
+type ConfigKeys interface{ ConfigKeys() []string }
+
 // Directive describes a ::: block for a DirectiveRenderer.
 type Directive struct {
 	Name  string

@@ -108,8 +108,8 @@ func TestParallelBuild(t *testing.T) {
 	}
 }
 
-// BenchmarkBuild1000Pages tracks the spec §1 target: under 1 s for 1,000
-// pages (build plus writing to disk).
+// BenchmarkBuild1000Pages tracks the build-time target: under 1 s for
+// 1,000 pages (build plus writing to disk).
 func BenchmarkBuild1000Pages(b *testing.B) {
 	cfg := genSite(b, 1000)
 	cfg.Build.OutputDir = b.TempDir()

@@ -15,8 +15,8 @@ import (
 	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
-// builtins returns fresh instances of every built-in plugin. Register
-// compiled-in third-party plugins here too.
+// builtins returns fresh instances of every built-in plugin. Custom
+// binaries add their own plugins with tryck.Main instead.
 func builtins(cfg *config.Config) []plugin.Plugin {
 	return []plugin.Plugin{
 		&TOC{Default: cfg.Defaults.TOC, MinLevel: cfg.Defaults.TOCDepth[0], MaxLevel: cfg.Defaults.TOCDepth[1]},
@@ -35,13 +35,10 @@ type Set struct {
 	plugins []plugin.Plugin
 }
 
-// keyed is implemented by built-ins to declare their config keys, so
-// typos in their sections produce config.unknownKey warnings.
-type keyed interface{ configKeys() []string }
-
 // Load enables the built-ins plus extra, initializes them and orders
 // them by Priority, then Name. A plugin is enabled unless its section in
-// cfg.Plugins sets enabled: false.
+// cfg.Plugins sets enabled: false. Two plugins with the same name are an
+// error and the later one is skipped.
 func Load(cfg *config.Config, site plugin.SiteInfo, extra ...plugin.Plugin) (*Set, []diag.Diagnostic) {
 	var dc diag.Collector
 	all := append(builtins(cfg), extra...)
@@ -49,6 +46,10 @@ func Load(cfg *config.Config, site plugin.SiteInfo, extra ...plugin.Plugin) (*Se
 	set := &Set{}
 	for _, p := range all {
 		name := p.Name()
+		if known[name] {
+			dc.Errorf(cfg.Path, 0, 0, "plugin.config", "plugin %s: duplicate plugin name", name)
+			continue
+		}
 		known[name] = true
 		section := cfg.Plugins[name]
 		if v, ok := section["enabled"]; ok {
@@ -61,9 +62,9 @@ func Load(cfg *config.Config, site plugin.SiteInfo, extra ...plugin.Plugin) (*Se
 				continue
 			}
 		}
-		if k, ok := p.(keyed); ok {
+		if k, ok := p.(plugin.ConfigKeys); ok {
 			allowed := map[string]bool{"enabled": true}
-			for _, key := range k.configKeys() {
+			for _, key := range k.ConfigKeys() {
 				allowed[key] = true
 			}
 			for _, key := range sortedKeys(section) {

@@ -118,6 +118,43 @@ Plugins are compiled in and hook into the build phases through the public API in
 | redirects | | A redirect page for each `aliases` entry |
 | mermaid | `plugins.mermaid` | ` ```mermaid ` blocks drawn as diagrams; the script loads from `url` (jsDelivr by default) only on pages that use it |
 
+### Writing a plugin
+
+A plugin is a Go type implementing `plugin.Plugin` plus any of the phase interfaces in [`pkg/plugin`](pkg/plugin). Custom binaries compile plugins in and hand them to `tryck.Main`:
+
+```go
+package main
+
+import (
+	"github.com/Pinta365/tryck/pkg/plugin"
+	"github.com/Pinta365/tryck/pkg/tryck"
+)
+
+type Hello struct{ greeting string }
+
+func (*Hello) Name() string { return "hello" }
+
+// Declare the keys of the "plugins.hello" section, so a typo warns.
+func (*Hello) ConfigKeys() []string { return []string{"greeting"} }
+
+func (h *Hello) Init(cfg map[string]any, _ plugin.SiteInfo) error {
+	h.greeting = "Hello"
+	if v, ok := cfg["greeting"].(string); ok {
+		h.greeting = v
+	}
+	return nil
+}
+
+func (h *Hello) OnPageParsed(p *plugin.Page) error {
+	p.Data["greeting"] = h.greeting
+	return nil
+}
+
+func main() { tryck.Main(&Hello{}) }
+```
+
+Build it with `go build`, for example `go build ./examples/plugin-hello`. See [`examples/plugin-hello`](examples/plugin-hello) for a complete, tested plugin. `ConfigKeys` is optional; declaring it turns typos in the plugin's section into `config.unknownKey` warnings.
+
 ## Deploying
 
 `tryck init` includes `.github/workflows/pages.yml`, which downloads a release binary and deploys to GitHub Pages with the right `--base-url`. For Cloudflare Pages, use this build command with the output directory `dist`:

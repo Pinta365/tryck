@@ -351,7 +351,7 @@ func (b *builder) render(p *content.Page) ([]byte, bool) {
 	data := &render.TemplateData{
 		Site:        b.site,
 		Page:        b.view.info[p.URL],
-		Content:     template.HTML(body), // trusted: rendered by goldmark (spec §9.4)
+		Content:     template.HTML(body), // trusted: rendered by goldmark
 		Nav:         nav.ForPage(b.view.nav, p.URL),
 		TOC:         toc,
 		Prev:        b.view.prev[p.URL],
@@ -375,7 +375,7 @@ func (b *builder) render(p *content.Page) ([]byte, bool) {
 	return p.HTML, true
 }
 
-// renderNotFound always emits 404.html (spec §13).
+// renderNotFound always emits 404.html.
 func (b *builder) renderNotFound(s *Site) {
 	data := &render.TemplateData{
 		Site:        b.site,

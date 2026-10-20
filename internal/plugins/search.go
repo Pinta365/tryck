@@ -33,7 +33,7 @@ type searchDoc struct {
 }
 
 func (*Search) Name() string         { return "search" }
-func (*Search) configKeys() []string { return []string{"maxTextLength"} }
+func (*Search) ConfigKeys() []string { return []string{"maxTextLength"} }
 
 func (s *Search) Init(cfg map[string]any, site plugin.SiteInfo) error {
 	s.MaxTextLength = 5000

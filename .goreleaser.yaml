@@ -12,7 +12,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X main.version={{ .Tag }}
+      - -s -w -X github.com/Pinta365/tryck/pkg/tryck.version={{ .Tag }}
     goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     ignore:

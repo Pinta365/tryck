@@ -15,7 +15,7 @@ import (
 	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
-// Directive blocks (spec §7.2):
+// Directive blocks:
 //
 //	:::name[title]{attrs}
 //	Markdown content

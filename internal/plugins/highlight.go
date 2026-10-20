@@ -26,7 +26,7 @@ type Highlight struct {
 const chromaCSSPath = "css/chroma.css"
 
 func (*Highlight) Name() string          { return "syntaxHighlighting" }
-func (*Highlight) configKeys() []string  { return []string{"theme", "darkTheme", "lineNumbers"} }
+func (*Highlight) ConfigKeys() []string  { return []string{"theme", "darkTheme", "lineNumbers"} }
 func (*Highlight) Stylesheets() []string { return []string{"/" + chromaCSSPath} }
 
 func (h *Highlight) Init(cfg map[string]any, _ plugin.SiteInfo) error {

@@ -1,4 +1,4 @@
-package main
+package tryck
 
 import (
 	"bytes"
@@ -21,7 +21,7 @@ func runIn(t *testing.T, dir string, args ...string) (code int, stdout, stderr s
 	}
 	t.Cleanup(func() { _ = os.Chdir(wd) })
 	var out, errOut bytes.Buffer
-	code = run(args, &out, &errOut)
+	code = Run(args, &out, &errOut)
 	return code, out.String(), errOut.String()
 }
 
@@ -131,7 +131,17 @@ func TestInfoHiddenWithoutVerbose(t *testing.T) {
 
 func TestResolveVersion(t *testing.T) {
 	info := func(v string) func() (*debug.BuildInfo, bool) {
-		return func() (*debug.BuildInfo, bool) { return &debug.BuildInfo{Main: debug.Module{Version: v}}, true }
+		return func() (*debug.BuildInfo, bool) {
+			return &debug.BuildInfo{Main: debug.Module{Path: modulePath, Version: v}}, true
+		}
+	}
+	deps := func(v string) func() (*debug.BuildInfo, bool) {
+		return func() (*debug.BuildInfo, bool) {
+			return &debug.BuildInfo{
+				Main: debug.Module{Path: "example.com/hello", Version: "(devel)"},
+				Deps: []*debug.Module{{Path: modulePath, Version: v}},
+			}, true
+		}
 	}
 	none := func() (*debug.BuildInfo, bool) { return nil, false }
 	tests := []struct {
@@ -143,6 +153,8 @@ func TestResolveVersion(t *testing.T) {
 		{"dev", info("v0.1.1"), "v0.1.1"},    // go install …@v0.1.1
 		{"dev", info("(devel)"), "dev"},      // go build in a checkout
 		{"dev", info(""), "dev"},
+		{"dev", deps("v0.2.0"), "v0.2.0"}, // a custom binary embedding tryck
+		{"dev", deps("(devel)"), "dev"},
 		{"dev", none, "dev"},
 	}
 	for _, tt := range tests {
