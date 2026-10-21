@@ -10,7 +10,8 @@ import (
 )
 
 // Sitemap writes /sitemap.xml with the absolute URL of every page that
-// is not a draft and belongs to the current version. It needs a baseUrl with a host.
+// is not a draft and belongs to the current version. It needs a baseUrl
+// with a host.
 type Sitemap struct {
 	site plugin.SiteInfo
 }

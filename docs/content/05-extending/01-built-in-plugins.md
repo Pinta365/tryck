@@ -3,7 +3,7 @@ title: Built-in plugins
 description: What each built-in plugin does and how to configure it.
 ---
 
-Eight plugins ship with tryck. They are all enabled by default; a plugin with no section in the config file is still active. Configure a plugin under its name in the `plugins` section, and turn it off with `enabled: false`.
+Nine plugins ship with tryck. They are all enabled by default; a plugin with no section in the config file is still active. Configure a plugin under its name in the `plugins` section, and turn it off with `enabled: false`.
 
 ```yaml
 plugins:
@@ -25,6 +25,7 @@ An unknown option in a plugin section is a `config.unknownKey` warning, and an u
 | `search` | `maxTextLength` | `5000` | Adds the search box and writes `/search-index.json`. |
 | `redirects` | — | on | Writes a redirect page per front matter alias. |
 | `mermaid` | `url` | jsDelivr mermaid 11 | Draws ` ```mermaid ` blocks. |
+| `feed` | `sections`, `limit`, `format`, `author` | `[/]`, `20`, `atom`, site title | Writes Atom or RSS feeds of dated pages. |
 
 ## toc
 
@@ -63,3 +64,23 @@ Writes a small meta-refresh page for every `aliases` entry in a page's front mat
 ## mermaid
 
 Renders ` ```mermaid ` code blocks as diagrams and adds a module script to pages that contain one. The `url` option is the module to load; the default is mermaid 11 from jsDelivr. Point it at a file under `static/` to work offline. See [Code and diagrams](../02-writing/05-code-and-diagrams.md).
+
+## feed
+
+Writes a feed of the pages that have a `date` in their front matter, newest first, for blog posts, release notes or a changelog. Drafts and [older versions](../02-writing/06-versioned-docs.md) are left out, and a site without dated pages gets no feed.
+
+| Option | Default | Meaning |
+| :- | :- | :- |
+| `sections` | `[/]` | Site paths that get a feed, each at `<section>feed.xml`. A page belongs to a section when its URL starts with it. The default is one feed for the whole site, `/feed.xml`. |
+| `limit` | `20` | The most entries per feed. |
+| `format` | `atom` | `atom` or `rss` (RSS 2.0). Feed readers handle both. |
+| `author` | the site title | The feed's author, for Atom. |
+
+```yaml
+plugins:
+  feed:
+    sections: [/blog/, /changelog/]
+```
+
+Each entry has the page's title, its absolute URL, its date and a summary: the front matter `description`, or else the page's first paragraph. Pages link the feeds of their sections in `<head>`, so browsers and feed readers find them. Feeds need a `site.baseUrl` with a host, like the sitemap; otherwise the build reports `feed.baseUrl` and writes none. A listed section without dated pages is a `feed.section` warning.
+

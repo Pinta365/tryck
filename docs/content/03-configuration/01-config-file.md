@@ -64,6 +64,8 @@ plugins:
     enabled: true
   mermaid:
     enabled: true
+  feed:
+    enabled: true
 ```
 
 The `toc` and `redirects` plugins are enabled as well; they need no section. The [plugin reference](../05-extending/01-built-in-plugins.md) lists every plugin, its options and defaults.

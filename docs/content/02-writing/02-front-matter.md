@@ -22,7 +22,7 @@ A leading UTF-8 byte order mark is ignored. If the file has no front matter, `--
 | :- | :- | :- |
 | `title` | string | Page title for the navigation, `<title>` and the heading the layouts add. |
 | `description` | string | Used for the `<meta name="description">` tag; falls back to `site.description`. |
-| `date` | date | Publication date, shown by the `post` layout and written to the sitemap as `lastmod`. |
+| `date` | date | Publication date, shown by the `post` layout, written to the sitemap as `lastmod`, and what puts a page in the [feed](../05-extending/01-built-in-plugins.md#feed). |
 | `draft` | bool | A draft is left out of a normal build and included in `tryck dev`. |
 | `weight` | int | Ordering among siblings in the navigation; lower comes first. |
 | `navTitle` | string | A shorter label for the sidebar and previous/next links. |
