@@ -108,7 +108,7 @@ Layouts are Go `html/template` files. To add analytics or other tags to every pa
 
 ## Custom directives
 
-A template in `layouts/directives/` adds a directive: `layouts/directives/card.html` renders `:::card[Title]{href="/guide/"}` blocks, with the title, attributes and rendered body as template data. No code or build step. See [Custom directives](https://tryck.pinta.land/extending/custom-directives/).
+A template in `layouts/directives/` adds a directive: `layouts/directives/card.html` renders `:::card[Title]{href="guide/setup.md"}` blocks, with the title, attributes and rendered body as template data; `href` and `src` are rewritten and checked like Markdown links. No code or build step. See [Custom directives](https://tryck.pinta.land/extending/custom-directives/).
 
 ## Script plugins
 

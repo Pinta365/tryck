@@ -2,19 +2,12 @@
 // fetched the first time the search box opens, and every search runs in
 // the browser. A page matches when every word of the query appears in its
 // title, headings or text; accents and case are ignored.
-(() => {
-  const root = document.querySelector(".search");
-  if (!root) return;
-  const dialog = root.querySelector(".search-dialog");
-  const input = root.querySelector(".search-input");
-  const list = root.querySelector(".search-results");
-  const status = root.querySelector(".search-status");
-  root.hidden = false;
 
+// tryckSearch is the search itself, without the page: it prepares the
+// index, finds and ranks pages, and renders results as HTML.
+const tryckSearch = (() => {
   const MAX_RESULTS = 12;
-  let docs = null;
-  let loading = null;
-  let active = -1;
+  const boundary = /[\s\p{P}]/u;
 
   // folded returns s lowercased and without accents, plus where each
   // folded character came from in s, so matches can be marked in s.
@@ -32,29 +25,15 @@
     return { s, f, from };
   }
 
-  const fold = (s) => folded(s).f;
-
-  function load() {
-    loading ??= fetch(root.dataset.index)
-      .then((r) => {
-        if (!r.ok) throw new Error(r.statusText);
-        return r.json();
-      })
-      .then((data) => {
-        docs = data.map((d) => ({
-          url: d.url,
-          title: folded(d.title),
-          headings: (d.headings ?? []).map((h) => ({ id: h.id, text: folded(h.text) })),
-          text: folded(d.text ?? ""),
-        }));
-      })
-      .catch(() => {
-        status.textContent = "The search index could not be loaded.";
-      });
-    return loading;
+  // prepare turns the parsed index into searchable pages.
+  function prepare(index) {
+    return index.map((d) => ({
+      url: d.url,
+      title: folded(d.title),
+      headings: (d.headings ?? []).map((h) => ({ id: h.id, text: folded(h.text) })),
+      text: folded(d.text ?? ""),
+    }));
   }
-
-  const boundary = /[\s\p{P}]/u;
 
   // atWordStart reports whether term occurs in f at the start of a word.
   function atWordStart(f, term) {
@@ -70,17 +49,18 @@
     return n;
   }
 
-  function search(query) {
-    const terms = fold(query).split(/\s+/).filter(Boolean);
+  // search returns the best matching pages: {page, heading, terms}.
+  function search(pages, query) {
+    const terms = folded(query).f.split(/\s+/).filter(Boolean);
     if (!terms.length) return [];
     const hits = [];
-    for (const d of docs) {
+    for (const page of pages) {
       let score = 0;
       for (const t of terms) {
         let s = 0;
-        if (d.title.f.includes(t)) s += atWordStart(d.title.f, t) ? 12 : 8;
-        if (d.headings.some((h) => h.text.f.includes(t))) s += 5;
-        s += count(d.text.f, t, 5);
+        if (page.title.f.includes(t)) s += atWordStart(page.title.f, t) ? 12 : 8;
+        if (page.headings.some((h) => h.text.f.includes(t))) s += 5;
+        s += count(page.text.f, t, 5);
         if (s === 0) {
           score = 0;
           break;
@@ -89,11 +69,11 @@
       }
       if (score === 0) continue;
       // Link to the first heading that contains every word, if any.
-      const heading = d.headings.find((h) => terms.every((t) => h.text.f.includes(t))) ?? null;
-      hits.push({ d, score, heading });
+      const heading = page.headings.find((h) => terms.every((t) => h.text.f.includes(t))) ?? null;
+      hits.push({ page, heading, terms, score });
     }
-    hits.sort((a, b) => b.score - a.score || a.d.title.s.localeCompare(b.d.title.s));
-    return hits.slice(0, MAX_RESULTS).map((h) => ({ ...h, terms }));
+    hits.sort((a, b) => b.score - a.score || a.page.title.s.localeCompare(b.page.title.s));
+    return hits.slice(0, MAX_RESULTS);
   }
 
   const escape = (s) =>
@@ -133,17 +113,52 @@
     return (lo > 0 ? "… " : "") + mark(x, terms, lo, hi) + (hi < x.f.length ? " …" : "");
   }
 
+  // resultHTML renders one hit as the link inside a result.
+  function resultHTML({ page, heading, terms }) {
+    const href = heading?.id ? `${page.url}#${heading.id}` : page.url;
+    return `<a href="${escape(href)}">` +
+      `<span class="search-title">${mark(page.title, terms)}</span>` +
+      (heading ? `<span class="search-heading">${mark(heading.text, terms)}</span>` : "") +
+      `<span class="search-snippet">${snippet(page.text, terms)}</span></a>`;
+  }
+
+  return { prepare, search, resultHTML, escape };
+})();
+
+// The search box: opening, typing, keyboard navigation.
+(() => {
+  const root = typeof document === "undefined" ? null : document.querySelector(".search");
+  if (!root) return;
+  const dialog = root.querySelector(".search-dialog");
+  const input = root.querySelector(".search-input");
+  const list = root.querySelector(".search-results");
+  const status = root.querySelector(".search-status");
+  root.hidden = false;
+
+  let pages = null;
+  let loading = null;
+  let active = -1;
+
+  function load() {
+    loading ??= fetch(root.dataset.index)
+      .then((r) => {
+        if (!r.ok) throw new Error(r.statusText);
+        return r.json();
+      })
+      .then((index) => {
+        pages = tryckSearch.prepare(index);
+      })
+      .catch(() => {
+        status.textContent = "The search index could not be loaded.";
+      });
+    return loading;
+  }
+
   function render(hits, query) {
     active = -1;
     input.removeAttribute("aria-activedescendant");
     list.innerHTML = hits
-      .map(({ d, heading, terms }, i) => {
-        const href = heading?.id ? `${d.url}#${heading.id}` : d.url;
-        return `<li id="search-result-${i}" role="option" aria-selected="false"><a href="${escape(href)}">` +
-          `<span class="search-title">${mark(d.title, terms)}</span>` +
-          (heading ? `<span class="search-heading">${mark(heading.text, terms)}</span>` : "") +
-          `<span class="search-snippet">${snippet(d.text, terms)}</span></a></li>`;
-      })
+      .map((hit, i) => `<li id="search-result-${i}" role="option" aria-selected="false">${tryckSearch.resultHTML(hit)}</li>`)
       .join("");
     input.setAttribute("aria-expanded", String(hits.length > 0));
     status.textContent = query.trim() && !hits.length ? `No results for “${query.trim()}”` : "";
@@ -161,18 +176,18 @@
   }
 
   function update() {
-    if (!docs) {
+    if (!pages) {
       status.textContent = loading ? "Loading…" : "";
       return;
     }
-    render(search(input.value), input.value);
+    render(tryckSearch.search(pages, input.value), input.value);
   }
 
   function open() {
     if (dialog.open) return;
     dialog.showModal();
     input.select();
-    if (!docs) {
+    if (!pages) {
       status.textContent = "Loading…";
       load().then(update);
     }

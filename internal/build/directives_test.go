@@ -93,3 +93,26 @@ func TestDirectiveTemplateWithCache(t *testing.T) {
 		t.Errorf("template not used:\n%s", site.Outputs["a/index.html"])
 	}
 }
+
+// href and src on a custom directive are rewritten and checked like
+// Markdown links.
+func TestDirectiveLinkAttributes(t *testing.T) {
+	site := mustBuild(t, writeSite(t, map[string]string{
+		"tryck.config.yaml":            "site:\n  baseUrl: https://example.com/docs/\n",
+		"layouts/directives/card.html": `<a class="card" href="{{ .Attrs.href }}"><img src="{{ .Attrs.src }}">{{ .Content }}</a>`,
+		"content/guide/a.md":           "# A\n\n:::card{href=\"../b.md#more\" src=\"pic.png\"}\nok\n:::\n\ntext\n\n:::card{href=\"../missing.md\"}\nbroken\n:::\n",
+		"content/guide/pic.png":        "png",
+		"content/b.md":                 "# B\n\n## More\n",
+	}))
+	a := string(site.Outputs["guide/a/index.html"])
+	if !strings.Contains(a, `<a class="card" href="/docs/b/#more"><img src="/docs/guide/pic.png">`) {
+		t.Errorf("link attributes not rewritten:\n%s", a)
+	}
+	d, ok := findDiag(site.Diags, "link.broken")
+	if !ok || d.File != "content/guide/a.md" || d.Line != 9 || !strings.Contains(d.Message, "/missing/") {
+		t.Errorf("want link.broken for the second card on line 9, got %v", site.Diags)
+	}
+	if n := len(site.Diags); n != 1 {
+		t.Errorf("want only the broken link, got %v", site.Diags)
+	}
+}

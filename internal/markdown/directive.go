@@ -89,6 +89,19 @@ type GenericDirective struct {
 	fence
 }
 
+// LinkAttrs are the directive attributes that hold links. tryck rewrites
+// and checks them like Markdown links.
+var LinkAttrs = []string{"href", "src"}
+
+// Link returns the value of a link attribute as written.
+func (n *GenericDirective) Link(attr string) (string, bool) {
+	v, ok := n.AttributeString(attr)
+	if !ok {
+		return "", false
+	}
+	return string(attrBytes(v)), true
+}
+
 var (
 	KindAdmonition       = ast.NewNodeKind("Admonition")
 	KindDetails          = ast.NewNodeKind("Details")

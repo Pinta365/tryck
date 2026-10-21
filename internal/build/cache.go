@@ -37,9 +37,11 @@ type parsed struct {
 	links  []linkRef
 }
 
-// linkRef is a link or image with its destination as written.
+// linkRef is a link, an image or a directive's link attribute (attr)
+// with its destination as written.
 type linkRef struct {
-	node ast.Node // *ast.Link or *ast.Image
+	node ast.Node // *ast.Link, *ast.Image or *markdown.GenericDirective
+	attr string   // the attribute, for a directive
 	dest string
 }
 

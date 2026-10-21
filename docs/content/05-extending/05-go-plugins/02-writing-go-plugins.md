@@ -97,7 +97,7 @@ func (m *MyPlugin) OnPageRendered(p *plugin.Page, s plugin.SiteView) error {
 
 ## Directives
 
-Implement `DirectiveRenderer` to render `:::name` blocks that tryck does not know. When the HTML only depends on the title, attributes and body, a [directive template](../02-custom-directives.md) is simpler. List the names in `DirectiveNames`; claiming a built-in name (`note`, `tip`, `info`, `warning`, `danger`, `details`, `tabs`) or a name another plugin already claimed is a `plugin.config` error. `RenderDirective` is called twice, with `entering` true for the opening HTML and false for the closing HTML, and the directive's Markdown content is rendered between the two calls. Registered names no longer produce a `directive.unknown` warning.
+Implement `DirectiveRenderer` to render `:::name` blocks that tryck does not know. When the HTML only depends on the title, attributes and body, a [directive template](../02-custom-directives.md) is simpler. The `href` and `src` attributes in `Directive.Attrs` are already rewritten to final URLs and are checked for you. List the names in `DirectiveNames`; claiming a built-in name (`note`, `tip`, `info`, `warning`, `danger`, `details`, `tabs`) or a name another plugin already claimed is a `plugin.config` error. `RenderDirective` is called twice, with `entering` true for the opening HTML and false for the closing HTML, and the directive's Markdown content is rendered between the two calls. Registered names no longer produce a `directive.unknown` warning.
 
 ## Stylesheets and output files
 

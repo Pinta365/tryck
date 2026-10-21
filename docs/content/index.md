@@ -28,27 +28,27 @@ tryck build
 ## Explore the guide
 
 ::::cards
-:::card[Installation]{href="/getting-started/installation/"}
+:::card[Installation]{href="01-getting-started/01-installation.md"}
 Download a binary or install with `go install`.
 :::
 
-:::card[Quick start]{href="/getting-started/quick-start/"}
+:::card[Quick start]{href="01-getting-started/02-quick-start.md"}
 Create a site, run the dev server and build it.
 :::
 
-:::card[Writing pages]{href="/writing/pages-and-urls/"}
+:::card[Writing pages]{href="02-writing/01-pages-and-urls.md"}
 How files become URLs, front matter, links and directives.
 :::
 
-:::card[Configuration]{href="/configuration/config-file/"}
+:::card[Configuration]{href="03-configuration/01-config-file.md"}
 Every config key and every command-line flag.
 :::
 
-:::card[Themes]{href="/themes/built-in-theme/"}
+:::card[Themes]{href="04-themes/01-built-in-theme.md"}
 Restyle the built-in theme or package your own.
 :::
 
-:::card[Extending tryck]{href="/extending/"}
+:::card[Extending tryck]{href="05-extending/_index.md"}
 Custom directives, JavaScript plugins and Go plugins.
 :::
 ::::

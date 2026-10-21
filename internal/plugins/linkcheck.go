@@ -10,6 +10,7 @@ import (
 
 	"github.com/yuin/goldmark/ast"
 
+	"github.com/Pinta365/tryck/internal/markdown"
 	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
@@ -54,16 +55,18 @@ func (l *LinkCheck) OnPageParsed(p *plugin.Page) error {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
-		var dest []byte
 		switch t := n.(type) {
 		case *ast.Link:
-			dest = t.Destination
+			lp.links = append(lp.links, pageLink{href: string(t.Destination), line: inlineLine(p, n)})
 		case *ast.Image:
-			dest = t.Destination
-		default:
-			return ast.WalkContinue, nil
+			lp.links = append(lp.links, pageLink{href: string(t.Destination), line: inlineLine(p, n)})
+		case *markdown.GenericDirective:
+			for _, attr := range markdown.LinkAttrs {
+				if href, ok := t.Link(attr); ok {
+					lp.links = append(lp.links, pageLink{href: href, line: p.LineAt(t.Offset)})
+				}
+			}
 		}
-		lp.links = append(lp.links, pageLink{href: string(dest), line: inlineLine(p, n)})
 		return ast.WalkContinue, nil
 	})
 	if len(lp.links) > 0 {

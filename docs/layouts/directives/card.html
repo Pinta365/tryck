@@ -1,6 +1,6 @@
 <div class="card{{ with .Attrs.class }} {{ . }}{{ end }}"{{ with .Attrs.id }} id="{{ . }}"{{ end }}>
 {{- with .Title }}
-<p class="card-title">{{ with $.Attrs.href }}<a href="{{ relURL . }}">{{ $.Title }}</a>{{ else }}{{ . }}{{ end }}</p>
+<p class="card-title">{{ with $.Attrs.href }}<a href="{{ . }}">{{ $.Title }}</a>{{ else }}{{ . }}{{ end }}</p>
 {{- end }}
 {{ .Content }}
 </div>

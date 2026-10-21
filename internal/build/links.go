@@ -8,6 +8,7 @@ import (
 	"github.com/yuin/goldmark/ast"
 
 	"github.com/Pinta365/tryck/internal/content"
+	"github.com/Pinta365/tryck/internal/markdown"
 	"github.com/Pinta365/tryck/internal/render"
 )
 
@@ -97,8 +98,8 @@ func (r *linkResolver) page(rel string) string {
 	return content.URLFor(rel, "")
 }
 
-// collectLinks lists every link and image in doc with its destination
-// as written in the source.
+// collectLinks lists every link, image and directive link attribute in
+// doc with its destination as written in the source.
 func collectLinks(doc ast.Node) []linkRef {
 	var refs []linkRef
 	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -107,9 +108,15 @@ func collectLinks(doc ast.Node) []linkRef {
 		}
 		switch l := n.(type) {
 		case *ast.Link:
-			refs = append(refs, linkRef{n, string(l.Destination)})
+			refs = append(refs, linkRef{node: n, dest: string(l.Destination)})
 		case *ast.Image:
-			refs = append(refs, linkRef{n, string(l.Destination)})
+			refs = append(refs, linkRef{node: n, dest: string(l.Destination)})
+		case *markdown.GenericDirective:
+			for _, attr := range markdown.LinkAttrs {
+				if dest, ok := l.Link(attr); ok {
+					refs = append(refs, linkRef{node: n, attr: attr, dest: dest})
+				}
+			}
 		}
 		return ast.WalkContinue, nil
 	})
@@ -126,6 +133,8 @@ func (r *linkResolver) rewrite(sourcePath string, refs []linkRef) {
 			l.Destination = []byte(dest)
 		case *ast.Image:
 			l.Destination = []byte(dest)
+		case *markdown.GenericDirective:
+			l.SetAttributeString(ref.attr, []byte(dest))
 		}
 	}
 }

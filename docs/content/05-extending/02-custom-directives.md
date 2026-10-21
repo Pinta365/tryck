@@ -14,7 +14,7 @@ This site has a `card` directive. Its template is `layouts/directives/card.html`
 ```html
 <div class="card{{ with .Attrs.class }} {{ . }}{{ end }}"{{ with .Attrs.id }} id="{{ . }}"{{ end }}>
 {{- with .Title }}
-<p class="card-title">{{ with $.Attrs.href }}<a href="{{ relURL . }}">{{ $.Title }}</a>{{ else }}{{ . }}{{ end }}</p>
+<p class="card-title">{{ with $.Attrs.href }}<a href="{{ . }}">{{ $.Title }}</a>{{ else }}{{ . }}{{ end }}</p>
 {{- end }}
 {{ .Content }}
 </div>
@@ -24,20 +24,20 @@ and a few lines of CSS in `static/css/docs.css`, linked with `theme.css`. In a p
 
 :::::tabs{group=example}
 @tab Result
-:::card[Custom directives]{href="/extending/custom-directives/"}
+:::card[Custom directives]{href="02-custom-directives.md"}
 Add your own `:::` blocks with a template file. **Markdown** works inside.
 :::
 
-:::card[Go plugins]{href="/extending/go-plugins/"}
+:::card[Go plugins]{href="05-go-plugins/_index.md"}
 Compile plugins into your own tryck binary when a template is not enough.
 :::
 @tab Markdown
 ````markdown
-:::card[Custom directives]{href="/extending/custom-directives/"}
+:::card[Custom directives]{href="02-custom-directives.md"}
 Add your own `:::` blocks with a template file. **Markdown** works inside.
 :::
 
-:::card[Go plugins]{href="/extending/go-plugins/"}
+:::card[Go plugins]{href="05-go-plugins/_index.md"}
 Compile plugins into your own tryck binary when a template is not enough.
 :::
 ````
@@ -81,7 +81,9 @@ A template without `.Content` drops the body, which suits embeds and other self-
 
 ## Links in attributes
 
-Markdown links in the body are rewritten and checked like any other link. Attribute values are passed as written, so an `href` attribute takes a site path such as `"/extending/go-plugins/"`. Values with spaces, `/` or other punctuation need double quotes; single quotes are not accepted. Pass it through `relURL` in the template so it gets the base path. Links in attributes are not checked.
+`href` and `src` attributes are links, and tryck treats them like links in Markdown: a relative path to a Markdown file or an asset is rewritten to its URL, the site's base path is added, and the link is checked. A broken one is a `link.broken` error at the directive's line. The cards above link with `href="02-custom-directives.md"`, and the template outputs `.Attrs.href` as it is.
+
+Other attributes are passed as written. Values with spaces, `/` or other punctuation need double quotes; single quotes are not accepted.
 
 ## Where templates are found
 
