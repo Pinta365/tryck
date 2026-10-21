@@ -1,0 +1,11 @@
+{{- /* The version picker: each version links to this page in that version, or to its home page. Empty on an unversioned site. */ -}}
+{{- if gt (len .Versions) 1 }}
+<details class="versions">
+<summary title="Documentation version">{{ .Version.Name }}</summary>
+<ul>
+{{- range .Versions }}
+<li><a href="{{ relURL .URL }}"{{ if .Active }} aria-current="true"{{ end }}>{{ .Name }}{{ if .Current }} <span class="versions-current">current</span>{{ end }}</a></li>
+{{- end }}
+</ul>
+</details>
+{{- end -}}

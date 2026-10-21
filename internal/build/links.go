@@ -29,10 +29,19 @@ import (
 // that a "/x.md" path is looked up as a source file. Every internal
 // destination is finally prefixed with baseUrl's path. External links
 // and same-page "#fragment" links are left alone.
+//
+// Each version has its own resolver: paths are relative to the
+// version's content directory, and its URLs carry its prefix. In an
+// older version, a root-absolute path to one of its own pages gets the
+// prefix; other root-absolute paths (shared static files) stay as they
+// are.
 type linkResolver struct {
 	baseURL string
-	pages   map[string]string // source path relative to contentDir -> URL
+	prefix  string            // the version's URL prefix, "/" for the current one
+	pages   map[string]string // source path relative to the content directory -> URL
 	assets  map[string]string // asset source path -> output path
+	urls    map[string]bool   // the version's page URLs
+	files   map[string]bool   // the version's asset output paths
 }
 
 func (r *linkResolver) resolve(sourcePath, dest string) (string, bool) {
@@ -48,6 +57,8 @@ func (r *linkResolver) resolve(sourcePath, dest string) (string, bool) {
 		site = u.Path
 		if strings.HasSuffix(site, ".md") {
 			site = r.page(strings.TrimPrefix(path.Clean(site), "/"))
+		} else if v := versionPath(r.prefix, site); r.urls[v] || r.files[strings.TrimPrefix(v, "/")] {
+			site = v
 		}
 	} else {
 		rel := path.Join(path.Dir(sourcePath), u.Path)
@@ -85,9 +96,9 @@ func (r *linkResolver) relative(rel string, dir bool) string {
 		}
 	}
 	if dir || path.Ext(rel) == "" {
-		return content.URLFor(path.Join(rel, "_index.md"), "")
+		return versionPath(r.prefix, content.URLFor(path.Join(rel, "_index.md"), ""))
 	}
-	return "/" + content.AssetPath(rel)
+	return versionPath(r.prefix, "/"+content.AssetPath(rel))
 }
 
 // page returns the URL of a Markdown source, or the URL it would have.
@@ -95,7 +106,7 @@ func (r *linkResolver) page(rel string) string {
 	if u, ok := r.pages[rel]; ok {
 		return u
 	}
-	return content.URLFor(rel, "")
+	return versionPath(r.prefix, content.URLFor(rel, ""))
 }
 
 // collectLinks lists every link, image and directive link attribute in

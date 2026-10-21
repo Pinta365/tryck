@@ -45,7 +45,8 @@ type Site struct {
 	Config  *config.Config
 	Pages   []*content.Page // sorted by URL
 	ByURL   map[string]*content.Page
-	Nav     *nav.Node                      // read-only after indexing
+	Nav     *nav.Node                      // the current version's; read-only after indexing
+	Navs    map[string]*nav.Node           // by version name
 	Anchors map[string]map[string]struct{} // URL -> set of element IDs
 	Assets  []content.Asset                // files from contentDir copied next to pages
 	Outputs map[string][]byte              // output path -> bytes (pages + generated files)
@@ -78,6 +79,8 @@ type builder struct {
 	searchIndex string
 	view        *siteView // frozen after indexing
 	pages       []*content.Page
+	versions    []config.Version             // the current version first
+	bySource    map[string]map[string]string // version -> source path -> URL
 }
 
 // Build runs the pipeline. It always returns a Site; check HasErrors.
@@ -91,8 +94,10 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 			Description: cfg.Site.Description,
 			BaseURL:     cfg.Site.BaseURL,
 			Language:    cfg.Site.Language,
+			Version:     cfg.Versions.Current,
 			Dev:         opts.Dev,
 		},
+		versions: cfg.ContentVersions(),
 	}
 	s := &Site{Config: cfg, ByURL: map[string]*content.Page{}, Outputs: map[string][]byte{}}
 	log := opts.Logger
@@ -148,36 +153,56 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	})
 	b.theme = b.themeData()
 
-	contentDir := cfg.Dir(cfg.Build.ContentDir)
-	src, err := content.Discover(contentDir)
-	if err != nil {
-		b.dc.Errorf(b.rel(contentDir), 0, 0, "content.read", "cannot read content: %v", err)
+	// Every version's content tree is read; older ones live under their
+	// URL prefix. Each version gets its own link resolver.
+	type source struct {
+		v   config.Version
+		rel string
 	}
-	s.Assets = src.Assets
-	stage("load", "pages", len(src.Pages), "assets", len(src.Assets), "plugins", len(set.Plugins()))
+	var sources []source
+	links := map[string]*linkResolver{}
+	for _, v := range b.versions {
+		if fi, err := os.Stat(v.Dir); !v.Current && (err != nil || !fi.IsDir()) {
+			b.dc.Errorf(cfg.Path, 0, 0, "config.invalid", "version %s: %s is not a directory; create it with tryck snapshot %s", v.Name, b.rel(v.Dir), v.Name)
+			continue
+		}
+		src, err := content.Discover(v.Dir)
+		if err != nil {
+			b.dc.Errorf(b.rel(v.Dir), 0, 0, "content.read", "cannot read content: %v", err)
+		}
+		r := &linkResolver{baseURL: cfg.Site.BaseURL, prefix: v.Prefix, pages: map[string]string{}, assets: map[string]string{}, urls: map[string]bool{}, files: map[string]bool{}}
+		links[v.Name] = r
+		for _, a := range src.Assets {
+			a.OutPath = strings.TrimPrefix(v.Prefix, "/") + a.OutPath
+			s.Assets = append(s.Assets, a)
+			r.assets[a.Rel] = a.OutPath
+			r.files[a.OutPath] = true
+		}
+		for _, rel := range src.Pages {
+			sources = append(sources, source{v, rel})
+		}
+	}
+	stage("load", "pages", len(sources), "assets", len(s.Assets), "plugins", len(set.Plugins()))
 
 	// [2] Parse, in parallel. A page only touches its own Page. Front
 	// matter is read first so that link rewriting knows every page's URL.
 	workers := cfg.WorkerCount()
-	read := make([]*content.Page, len(src.Pages))
-	err = workpool.Run(ctx, len(src.Pages), workers, func(i int) {
-		read[i] = b.readPage(contentDir, src.Pages[i])
+	read := make([]*content.Page, len(sources))
+	err := workpool.Run(ctx, len(sources), workers, func(i int) {
+		read[i] = b.readPage(sources[i].v, sources[i].rel)
 	})
 	if err != nil {
 		return nil, err
 	}
-	links := &linkResolver{baseURL: cfg.Site.BaseURL, pages: map[string]string{}, assets: map[string]string{}}
 	for _, p := range read {
 		if p != nil {
 			b.pages = append(b.pages, p)
-			links.pages[p.SourcePath] = p.URL
+			links[p.Version].pages[p.SourcePath] = p.URL
+			links[p.Version].urls[p.URL] = true
 		}
 	}
-	for _, a := range src.Assets {
-		links.assets[a.Rel] = a.OutPath
-	}
 	err = workpool.Run(ctx, len(b.pages), workers, func(i int) {
-		b.parsePage(b.pages[i], links)
+		b.parsePage(b.pages[i], links[b.pages[i].Version])
 	})
 	if err != nil {
 		return nil, err
@@ -197,7 +222,24 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 		s.ByURL[p.URL] = p
 		s.Pages = append(s.Pages, p)
 	}
-	s.Nav = nav.Build(s.Pages, cfg.Site.Title)
+	s.Navs = map[string]*nav.Node{}
+	for _, v := range b.versions {
+		var pages []*content.Page
+		for _, p := range s.Pages {
+			if p.Version == v.Name {
+				pages = append(pages, p)
+			}
+		}
+		s.Navs[v.Name] = nav.Build(pages, cfg.Site.Title)
+	}
+	s.Nav = s.Navs[cfg.Versions.Current]
+	b.bySource = map[string]map[string]string{}
+	for _, p := range s.Pages {
+		if b.bySource[p.Version] == nil {
+			b.bySource[p.Version] = map[string]string{}
+		}
+		b.bySource[p.Version][p.SourcePath] = p.URL
+	}
 	s.Anchors = make(map[string]map[string]struct{}, len(s.Pages))
 	for _, p := range s.Pages {
 		s.Anchors[p.URL] = anchors(p.AST)
@@ -276,8 +318,8 @@ func (r reporter) Report(d plugin.Diagnostic) {
 
 // readPage reads one Markdown file and its front matter. It returns nil
 // for drafts that are excluded and for files that cannot be read.
-func (b *builder) readPage(contentDir, rel string) *content.Page {
-	abs := filepath.Join(contentDir, filepath.FromSlash(rel))
+func (b *builder) readPage(v config.Version, rel string) *content.Page {
+	abs := filepath.Join(v.Dir, filepath.FromSlash(rel))
 	file := b.rel(abs)
 	raw, err := os.ReadFile(abs)
 	if err != nil {
@@ -301,20 +343,38 @@ func (b *builder) readPage(contentDir, rel string) *content.Page {
 	p.BodyLine = bodyLine
 	p.Data = map[string]any{}
 	p.Diags = reporter{&b.dc, file}
-	p.URL = content.URLFor(rel, front.Slug)
+	p.Version = v.Name
+	p.URL = versionPath(v.Prefix, content.URLFor(rel, front.Slug))
 	p.OutPath = content.OutputPath(p.URL)
+	if !v.Current {
+		// Aliases are paths within the page's version.
+		p.Front.Aliases = slices.Clone(p.Front.Aliases)
+		for i, a := range p.Front.Aliases {
+			if strings.HasPrefix(a, "/") {
+				p.Front.Aliases[i] = versionPath(v.Prefix, a)
+			}
+		}
+	}
 	return p
+}
+
+// versionPath puts a site path under a version's URL prefix.
+func versionPath(prefix, sitePath string) string {
+	if prefix == "/" {
+		return sitePath
+	}
+	return prefix + strings.TrimPrefix(sitePath, "/")
 }
 
 // parsePage parses the Markdown body, rewrites links and runs the
 // PageParser plugins.
 func (b *builder) parsePage(p *content.Page, links *linkResolver) {
 	file, body := p.File, p.Source
-	e := b.opts.Cache.get(p.SourcePath, p.Hash)
+	e := b.opts.Cache.get(p.File, p.Hash)
 	if e == nil {
 		doc, issues := b.md.Parse(body)
 		e = &parsed{sum: p.Hash, doc: doc, issues: issues, h1: content.FirstH1(doc, body), links: collectLinks(doc)}
-		b.opts.Cache.put(p.SourcePath, e)
+		b.opts.Cache.put(p.File, e)
 	}
 	p.AST = e.doc
 	for _, is := range slices.Concat(e.issues, b.md.Unknown(e.doc)) {
@@ -370,15 +430,16 @@ func (b *builder) render(p *content.Page) ([]byte, bool) {
 		Site:        b.site,
 		Page:        b.view.info[p.URL],
 		Content:     template.HTML(body), // trusted: rendered by goldmark
-		Nav:         nav.ForPage(b.view.nav, p.URL),
+		Nav:         nav.ForPage(b.view.navs[p.Version], p.URL),
 		TOC:         toc,
 		Prev:        b.view.prev[p.URL],
 		Next:        b.view.next[p.URL],
 		Stylesheets: b.styles,
 		Theme:       b.theme,
-		SearchIndex: b.searchIndex,
+		SearchIndex: b.searchIndexFor(p.Version),
 		Dev:         b.opts.Dev,
 	}
+	data.Versions, data.Version = b.versionLinks(p.Version, p.SourcePath)
 	var buf bytes.Buffer
 	if err := b.tmpl.Execute(&buf, layout, data); err != nil {
 		b.dc.Errorf(p.File, 0, 0, "template.exec", "%v", err)
@@ -394,6 +455,42 @@ func (b *builder) render(p *content.Page) ([]byte, bool) {
 	return p.HTML, true
 }
 
+// searchIndexFor returns the site path of a version's search index, or ""
+// when search is off.
+func (b *builder) searchIndexFor(version string) string {
+	if b.searchIndex == "" {
+		return ""
+	}
+	for _, v := range b.versions {
+		if v.Name == version {
+			return versionPath(v.Prefix, b.searchIndex)
+		}
+	}
+	return b.searchIndex
+}
+
+// versionLinks lists every version for a page in version with the given
+// source path: the same page in each version where it exists, otherwise
+// that version's home page. It returns nil on an unversioned site.
+func (b *builder) versionLinks(version, sourcePath string) ([]render.VersionLink, *render.VersionLink) {
+	if len(b.versions) < 2 && b.cfg.Versions.Current == "" {
+		return nil, nil
+	}
+	links := make([]render.VersionLink, len(b.versions))
+	var active *render.VersionLink
+	for i, v := range b.versions {
+		url := v.Prefix
+		if u, ok := b.bySource[v.Name][sourcePath]; ok && sourcePath != "" {
+			url = u
+		}
+		links[i] = render.VersionLink{Name: v.Name, URL: url, Current: v.Current, Active: v.Name == version}
+		if links[i].Active {
+			active = &links[i]
+		}
+	}
+	return links, active
+}
+
 // renderNotFound always emits 404.html.
 func (b *builder) renderNotFound(s *Site) {
 	data := &render.TemplateData{
@@ -402,9 +499,10 @@ func (b *builder) renderNotFound(s *Site) {
 		Nav:         s.Nav,
 		Stylesheets: b.styles,
 		Theme:       b.theme,
-		SearchIndex: b.searchIndex,
+		SearchIndex: b.searchIndexFor(b.cfg.Versions.Current),
 		Dev:         b.opts.Dev,
 	}
+	data.Versions, data.Version = b.versionLinks(b.cfg.Versions.Current, "")
 	var buf bytes.Buffer
 	if err := b.tmpl.Execute(&buf, "404", data); err != nil {
 		if errors.Is(err, render.ErrMissingLayout) {
@@ -483,6 +581,7 @@ func (b *builder) addBuiltinStatic(s *Site, static map[string]bool) {
 func pageInfo(p *content.Page) *plugin.PageInfo {
 	return &plugin.PageInfo{
 		SourcePath:  p.SourcePath,
+		Version:     p.Version,
 		Title:       p.Title,
 		NavTitle:    p.Front.NavTitle,
 		Description: p.Front.Description,

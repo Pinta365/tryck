@@ -124,7 +124,10 @@ func (s *Server) Done() <-chan struct{} { return s.done }
 
 func (s *Server) watchRoots() error {
 	c := s.cfg
-	dirs := []string{c.Dir(c.Build.ContentDir), c.Dir(c.Build.LayoutsDir), c.Dir(c.Build.StaticDir), c.Dir(c.Build.PluginsDir)}
+	dirs := []string{c.Dir(c.Build.LayoutsDir), c.Dir(c.Build.StaticDir), c.Dir(c.Build.PluginsDir)}
+	for _, v := range c.ContentVersions() {
+		dirs = append(dirs, v.Dir)
+	}
 	if t := c.ThemeDir(); t != "" {
 		dirs = append(dirs, t)
 	}
@@ -199,7 +202,11 @@ func (s *Server) classify(name string) change {
 	if t := c.ThemeDir(); t != "" && under(filepath.Join(t, config.ThemeFile)) {
 		return changeConfig
 	}
-	for _, d := range slices.Concat(c.LayoutDirs(), c.PluginDirs(), []string{c.Dir(c.Build.ContentDir)}) {
+	var contentDirs []string
+	for _, v := range c.ContentVersions() {
+		contentDirs = append(contentDirs, v.Dir)
+	}
+	for _, d := range slices.Concat(c.LayoutDirs(), c.PluginDirs(), contentDirs) {
 		if under(d) {
 			return changeContent
 		}

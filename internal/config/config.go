@@ -33,6 +33,7 @@ type Config struct {
 	Build    BuildConfig    `yaml:"build"`
 	Defaults DefaultsConfig `yaml:"defaults"`
 	Theme    ThemeConfig    `yaml:"theme"`
+	Versions VersionsConfig `yaml:"versions"`
 	// Plugins maps a plugin's config name to its raw section. Each plugin
 	// decodes its own section.
 	Plugins map[string]map[string]any `yaml:"plugins"`
@@ -84,6 +85,49 @@ type ThemeConfig struct {
 	CSS         []string       `yaml:"css"`         // extra stylesheets, linked after the theme's
 	Params      map[string]any `yaml:"params"`      // free-form values for custom themes
 }
+
+// VersionsConfig names the current version (contentDir) and lists older
+// versions, newest first. Without older versions the site is unversioned.
+type VersionsConfig struct {
+	Current string          `yaml:"current"`
+	Older   []VersionConfig `yaml:"older"`
+}
+
+// VersionConfig is one older version: a snapshot of the content served
+// under /<name>/.
+type VersionConfig struct {
+	Name string `yaml:"name"`
+	Dir  string `yaml:"dir"` // default: versions/<name>
+}
+
+// Version is a content tree of the site and where it is served.
+type Version struct {
+	Name    string // "" for an unversioned site
+	Dir     string // the content directory
+	Prefix  string // URL prefix: "/" for the current version, "/<name>/" for older ones
+	Current bool
+}
+
+// ContentVersions lists the site's content trees, the current one first.
+// An unversioned site has one, with an empty name.
+func (c *Config) ContentVersions() []Version {
+	vs := []Version{{Name: c.Versions.Current, Dir: c.Dir(c.Build.ContentDir), Prefix: "/", Current: true}}
+	for _, v := range c.Versions.Older {
+		dir := v.Dir
+		if dir == "" {
+			dir = filepath.Join("versions", v.Name)
+		}
+		vs = append(vs, Version{Name: v.Name, Dir: c.Dir(dir), Prefix: "/" + v.Name + "/"})
+	}
+	return vs
+}
+
+// versionNameRE matches names usable as one URL segment.
+var versionNameRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
+
+// ValidVersionName reports whether name can name a version: one URL
+// segment of letters, digits, '.', '-' and '_'.
+func ValidVersionName(name string) bool { return versionNameRE.MatchString(name) }
 
 // NavLink is a header link.
 type NavLink struct {
@@ -457,6 +501,24 @@ func (c *Config) Validate() []diag.Diagnostic {
 	for i, l := range c.Theme.Nav {
 		if l.Title == "" || l.URL == "" {
 			bad("theme.nav[%d] needs both title and url", i)
+		}
+	}
+	if v := c.Versions; v.Current != "" || len(v.Older) > 0 {
+		seen := map[string]bool{}
+		check := func(key, name string) {
+			switch {
+			case name == "":
+				bad("%s must not be empty", key)
+			case !versionNameRE.MatchString(name):
+				bad("%s %q must be one URL segment: letters, digits, '.', '-' and '_'", key, name)
+			case seen[name]:
+				bad("%s %q is used twice", key, name)
+			}
+			seen[name] = true
+		}
+		check("versions.current", v.Current)
+		for i, o := range v.Older {
+			check(fmt.Sprintf("versions.older[%d].name", i), o.Name)
 		}
 	}
 	if lo, hi := c.Defaults.TOCDepth[0], c.Defaults.TOCDepth[1]; lo < 1 || hi > 6 || lo > hi {

@@ -69,7 +69,7 @@ flowchart LR
 
 **`config`** is the plugin's section from `plugins:`, without `enabled`. It is `{}` when there is no section.
 
-**`site`** in `init` holds `title`, `description`, `baseUrl`, `language` and `dev` (true in `tryck dev`). `onPageRendered` adds three lookups:
+**`site`** in `init` holds `title`, `description`, `baseUrl`, `language`, `version` (the current version's name, or `""`) and `dev` (true in `tryck dev`). `onPageRendered` adds three lookups:
 
 - `site.page(url)`: another page by URL (`url`, `title`, `description`, `date`, `data`, ...), or `null`,
 - `site.hasFile(path)`: whether a site path such as `/img/logo.png` exists,
@@ -81,7 +81,8 @@ In `onBuildComplete`, `site.pages` lists every page (`url`, `sourcePath`, `title
 
 | Field | Meaning |
 | :- | :- |
-| `url`, `sourcePath`, `title` | The page's URL, its file relative to `content/`, and its front matter title. |
+| `url`, `sourcePath`, `title` | The page's URL, its file relative to its content directory, and its front matter title. |
+| `version` | The page's version on a [versioned site](../02-writing/06-versioned-docs.md), or `""`. |
 | `front` | The front matter, including your own keys: `page.front.status`. |
 | `source` | The Markdown body, without the front matter. |
 | `headings` | Every heading: `{level, id, text}`. |

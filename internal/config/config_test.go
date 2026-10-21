@@ -346,3 +346,33 @@ func TestThemeValidate(t *testing.T) {
 		}
 	}
 }
+
+func TestVersions(t *testing.T) {
+	cfg := Defaults()
+	if vs := cfg.ContentVersions(); len(vs) != 1 || vs[0].Name != "" || vs[0].Prefix != "/" || !vs[0].Current {
+		t.Errorf("unversioned site: %+v", vs)
+	}
+	cfg.Versions = VersionsConfig{Current: "v2", Older: []VersionConfig{{Name: "v1"}, {Name: "v0", Dir: "archive/zero"}}}
+	vs := cfg.ContentVersions()
+	if len(vs) != 3 || vs[1].Prefix != "/v1/" || vs[1].Dir != filepath.Join(".", "versions", "v1") || vs[2].Dir != filepath.Join(".", "archive", "zero") || vs[1].Current {
+		t.Errorf("versions = %+v", vs)
+	}
+	if ds := cfg.Validate(); len(ds) != 0 {
+		t.Errorf("valid versions: %v", ds)
+	}
+	for _, tt := range []struct {
+		v    VersionsConfig
+		want string
+	}{
+		{VersionsConfig{Older: []VersionConfig{{Name: "v1"}}}, "versions.current must not be empty"},
+		{VersionsConfig{Current: "v2", Older: []VersionConfig{{Name: "v 1"}}}, `versions.older[0].name "v 1" must be one URL segment`},
+		{VersionsConfig{Current: "v2", Older: []VersionConfig{{Name: "v2"}}}, `versions.older[0].name "v2" is used twice`},
+		{VersionsConfig{Current: "v2", Older: []VersionConfig{{Name: "a/b"}}}, "must be one URL segment"},
+	} {
+		cfg.Versions = tt.v
+		ds := cfg.Validate()
+		if len(ds) != 1 || !strings.Contains(ds[0].Message, tt.want) {
+			t.Errorf("%+v: diagnostics = %v, want %q", tt.v, ds, tt.want)
+		}
+	}
+}

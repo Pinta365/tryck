@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"strconv"
@@ -52,6 +53,7 @@ Usage:
   tryck build [--config tryck.config.yaml] [--output ./dist] [--drafts] [--base-url URL] [--workers N] [--verbose]
   tryck dev   [--config tryck.config.yaml] [--port 8080] [--host 127.0.0.1] [--open] [--verbose]
   tryck init  [dir]
+  tryck snapshot [--config tryck.config.yaml] <name>
   tryck version
 
 Run "tryck <command> -h" for the flags of a command.
@@ -84,6 +86,8 @@ func Run(args []string, stdout, stderr io.Writer, plugins ...plugin.Plugin) int 
 		return runDev(rest, stdout, stderr, plugins)
 	case "init":
 		return runInit(rest, stdout, stderr)
+	case "snapshot":
+		return runSnapshot(rest, stdout, stderr)
 	case "version", "--version", "-version":
 		fmt.Fprintf(stdout, "tryck %s\n", resolveVersion(version, debug.ReadBuildInfo))
 		return exitOK
@@ -338,6 +342,54 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "  cd %s\n", dir)
 	}
 	fmt.Fprintln(stdout, "  tryck dev")
+	return exitOK
+}
+
+// runSnapshot copies the current content to versions/<name>, making it
+// an older version, and prints the config to add. It does not edit the
+// config file, which keeps its comments and layout.
+func runSnapshot(args []string, stdout, stderr io.Writer) int {
+	fs := newFlagSet("snapshot", "[flags] <name>", stderr)
+	configPath := fs.String("config", config.DefaultPath, "config file")
+	if code, ok := parseFlags(fs, args, 1, stderr); !ok {
+		return code
+	}
+	name := fs.Arg(0)
+	if !config.ValidVersionName(name) {
+		fmt.Fprintf(stderr, "tryck snapshot: give the version a name of letters, digits, '.', '-' and '_', such as v1.2\n")
+		return exitConfig
+	}
+	cfg, _ := loadConfig(*configPath, setFlags(fs)["config"], config.Overrides{}, stderr)
+	if cfg == nil {
+		return exitConfig
+	}
+	for _, v := range cfg.Versions.Older {
+		if v.Name == name {
+			fmt.Fprintf(stderr, "tryck snapshot: %s is already an older version in %s\n", name, *configPath)
+			return exitConfig
+		}
+	}
+	src := cfg.Dir(cfg.Build.ContentDir)
+	dst := filepath.Join("versions", name)
+	if _, err := os.Stat(cfg.Dir(dst)); err == nil {
+		fmt.Fprintf(stderr, "tryck snapshot: %s already exists\n", filepath.ToSlash(dst))
+		return exitBuild
+	}
+	files, err := scaffold.Init(cfg.Dir(dst), os.DirFS(src))
+	if err != nil {
+		fmt.Fprintf(stderr, "tryck snapshot: %v\n", err)
+		return exitBuild
+	}
+	contentDir := filepath.ToSlash(filepath.Clean(cfg.Build.ContentDir)) + "/"
+	fmt.Fprintf(stdout, "Copied %s to %s/ (%d files).\n\n", contentDir, filepath.ToSlash(dst), len(files))
+	fmt.Fprintf(stdout, "Add it to %s as the newest older version, and set current to the\nversion %s holds from now on:\n\nversions:\n  current: <next version>\n  older:\n    - name: %s\n",
+		*configPath, contentDir, name)
+	for _, v := range cfg.Versions.Older {
+		fmt.Fprintf(stdout, "    - name: %s\n", v.Name)
+		if v.Dir != "" {
+			fmt.Fprintf(stdout, "      dir: %s\n", v.Dir)
+		}
+	}
 	return exitOK
 }
 

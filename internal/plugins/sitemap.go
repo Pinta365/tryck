@@ -10,7 +10,7 @@ import (
 )
 
 // Sitemap writes /sitemap.xml with the absolute URL of every page that
-// is not a draft. It needs a baseUrl with a host.
+// is not a draft and belongs to the current version. It needs a baseUrl with a host.
 type Sitemap struct {
 	site plugin.SiteInfo
 }
@@ -36,7 +36,8 @@ func (s *Sitemap) OnBuildComplete(v plugin.SiteView, out plugin.Outputs) error {
 	}
 	var urls []sitemapURL
 	for _, p := range v.Pages() {
-		if p.Draft {
+		// Older versions stay out of search engines.
+		if p.Draft || p.Version != s.site.Version {
 			continue
 		}
 		e := sitemapURL{Loc: render.AbsURL(s.site.BaseURL, p.URL)}

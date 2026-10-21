@@ -214,6 +214,7 @@ func (s *script) pageObject(rt *goja.Runtime, p *plugin.Page) *goja.Object {
 	obj := fromJSON(rt, map[string]any{
 		"url":        p.URL,
 		"sourcePath": p.SourcePath,
+		"version":    p.Version,
 		"title":      p.Front.Title,
 		"front":      frontJSON(p.Front),
 		"source":     string(p.Source),
@@ -354,7 +355,7 @@ func (s *script) call(rt *goja.Runtime, hook string, args ...goja.Value) (goja.V
 }
 
 func siteJSON(site plugin.SiteInfo) map[string]any {
-	return map[string]any{"title": site.Title, "description": site.Description, "baseUrl": site.BaseURL, "language": site.Language, "dev": site.Dev}
+	return map[string]any{"title": site.Title, "description": site.Description, "baseUrl": site.BaseURL, "language": site.Language, "version": site.Version, "dev": site.Dev}
 }
 
 // frontJSON is the front matter with the page's own keys at the top
@@ -376,7 +377,7 @@ func frontJSON(f plugin.FrontMatter) map[string]any {
 
 func pageInfoJSON(p *plugin.PageInfo) map[string]any {
 	m := map[string]any{
-		"url": p.URL, "sourcePath": p.SourcePath, "title": p.Title, "navTitle": p.NavTitle,
+		"url": p.URL, "sourcePath": p.SourcePath, "version": p.Version, "title": p.Title, "navTitle": p.NavTitle,
 		"description": p.Description, "draft": p.Draft, "weight": p.Weight,
 		"aliases": p.Aliases, "params": p.Params, "data": p.Data,
 	}

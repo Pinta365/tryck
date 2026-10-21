@@ -60,7 +60,17 @@ type TemplateData struct {
 	Stylesheets []string          // site paths of plugin CSS to link in <head>
 	Theme       ThemeData         // theme settings from the config
 	SearchIndex string            // site path of the search index, "" if search is off
+	Version     *VersionLink      // the page's version; nil on an unversioned site
+	Versions    []VersionLink     // every version, the current one first; nil on an unversioned site
 	Dev         bool              // true in tryck dev
+}
+
+// VersionLink is one version of the site, as seen from a page.
+type VersionLink struct {
+	Name    string
+	URL     string // site path of this page in that version, or of the version's home page
+	Current bool   // the current version
+	Active  bool   // the version of the page being rendered
 }
 
 // ThemeData is the theme section of the config, ready for templates.

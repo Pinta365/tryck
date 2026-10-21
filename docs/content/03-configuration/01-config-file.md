@@ -31,6 +31,10 @@ defaults:
   tocDepth: [2, 3]
   dateFormat: "2006-01-02"
 
+versions:
+  current: ""
+  older: []
+
 theme:
   path: ""
   accent: ""
@@ -109,6 +113,17 @@ The directory keys must not be empty, and `workers` must be `0` or positive.
 | `toc` | bool | `true` | Show a table of contents; a page's `toc` front matter overrides it. |
 | `tocDepth` | `[min, max]` | `[2, 3]` | Heading levels included in the table of contents. Each is `1`–`6` and `min ≤ max`. |
 | `dateFormat` | string | `"2006-01-02"` | Go time layout used by `dateFormat` when no layout is passed. |
+
+## versions
+
+Makes the site [versioned](../02-writing/06-versioned-docs.md). Without it the site has one version.
+
+| Key | Type | Default | Meaning |
+| :- | :- | :- | :- |
+| `current` | string | `""` | Name of the version `content/` holds, served at the root. Required when `older` is set. |
+| `older` | list | `[]` | Older versions, newest first. Each has a `name` (its URL segment) and an optional `dir` (default `versions/<name>`). |
+
+Names may contain letters, digits, `.`, `-` and `_`, and must be unique. A listed version whose directory does not exist is a `config.invalid` error.
 
 ## theme
 

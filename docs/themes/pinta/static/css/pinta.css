@@ -100,3 +100,5 @@ th { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); }
 .search-dialog { border-color: var(--line-strong); }
 .search-results mark { background: color-mix(in srgb, var(--mint) 55%, transparent); }
 .search-heading { color: var(--label); font-family: var(--font-mono); font-size: 0.8rem; }
+.versions > summary { font-family: var(--font-mono); font-size: 0.85rem; border-color: var(--line-strong); }
+.versions ul { border-color: var(--line-strong); }

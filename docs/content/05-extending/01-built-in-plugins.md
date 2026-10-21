@@ -44,7 +44,7 @@ Records internal links while pages are parsed and checks them once every page, a
 
 ## sitemap
 
-Writes `/sitemap.xml` with an absolute URL for every page that is not a draft. It needs a `site.baseUrl` with a host, otherwise it reports `sitemap.baseUrl` and writes nothing. A page's `date` becomes the entry's `lastmod`.
+Writes `/sitemap.xml` with an absolute URL for every page that is not a draft. On a [versioned site](../02-writing/06-versioned-docs.md) it lists only the current version. It needs a `site.baseUrl` with a host, otherwise it reports `sitemap.baseUrl` and writes nothing. A page's `date` becomes the entry's `lastmod`.
 
 ## search
 
@@ -54,7 +54,7 @@ The box opens with the **Search** button, `/` or Ctrl+K (⌘K on a Mac), and Esc
 
 The index is an array of `{url, title, headings, text}` for every page that is not a draft. `headings` lists the page's level 2 to 6 headings as `{id, text}`. Code blocks are left out of the text, which is cut to `maxTextLength` bytes (default `5000`).
 
-`enabled: false` removes both the index and the search box. A custom header shows the box with `{{ partial "search" . }}`; see [Layouts and templates](../04-themes/03-layouts-and-templates.md).
+On a [versioned site](../02-writing/06-versioned-docs.md) each version has its own index, and the box searches the reader's version. `enabled: false` removes both the index and the search box. A custom header shows the box with `{{ partial "search" . }}`; see [Layouts and templates](../04-themes/03-layouts-and-templates.md).
 
 ## redirects
 

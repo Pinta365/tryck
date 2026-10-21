@@ -7,6 +7,9 @@
 {{- with or .Page.Description .Site.Description }}
 <meta name="description" content="{{ . }}">
 {{- end }}
+{{- with .Version }}{{ if not .Current }}
+<meta name="robots" content="noindex">
+{{- end }}{{ end }}
 <link rel="stylesheet" href="{{ relURL "/css/tryck.css" }}">
 {{- range .Stylesheets }}
 <link rel="stylesheet" href="{{ relURL . }}">
@@ -34,6 +37,7 @@
 {{- if .Page.Draft }}
 <div class="draft-banner" role="note">Draft: this page is only published when drafts are enabled.</div>
 {{- end }}
+{{- partial "version-banner" . }}
 {{ block "main" . }}<main class="content">{{ .Content }}</main>{{ end }}
 {{ partial "footer" . }}
 <script>

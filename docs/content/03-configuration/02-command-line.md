@@ -7,6 +7,7 @@ description: Commands, flags and exit codes.
 tryck build [flags]
 tryck dev   [flags]
 tryck init  [dir]
+tryck snapshot <name>
 tryck version
 tryck help
 ```
@@ -58,6 +59,14 @@ tryck init [dir]
 ```
 
 Copies the starter site into `dir` (the current directory by default), creating it if needed. It writes nothing if any file it would create already exists. `dir` must be at most one directory. See [Quick start](../01-getting-started/02-quick-start.md).
+
+## snapshot
+
+```
+tryck snapshot [--config tryck.config.yaml] <name>
+```
+
+Copies `content/` to `versions/<name>/`, making the current docs an older version, and prints the lines to add to the config. It refuses a name that is already an older version, or a directory that already exists, and it does not edit the config file. Copying the folder by hand works the same. See [Versioned docs](../02-writing/06-versioned-docs.md).
 
 ## version
 

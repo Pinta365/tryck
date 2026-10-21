@@ -13,6 +13,7 @@ my-docs/
 ├── layouts/             template overrides (optional)
 ├── plugins/             script plugins (optional)
 ├── themes/              theme folders (optional)
+├── versions/            older versions of content/ (optional)
 └── dist/                build output (written by tryck build)
 ```
 
@@ -46,6 +47,10 @@ Optional JavaScript files, one plugin each, that add data to pages, change their
 ## themes/
 
 Theme folders, each holding `theme.yaml`, `layouts/` and `static/`. Point `theme.path` at one to reuse a whole look. See [Theme folders](../04-themes/02-theme-folders.md).
+
+## versions/
+
+Snapshots of `content/` for older releases, one folder per version, on a [versioned site](../02-writing/06-versioned-docs.md).
 
 ## tryck.config.yaml
 

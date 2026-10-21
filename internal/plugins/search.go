@@ -16,7 +16,9 @@ import (
 
 // Search writes /search-index.json: [{url, title, headings, text}] for
 // every page that is not a draft, with text cut to MaxTextLength bytes.
-// headings are the page's level 2 to 6 headings as {id, text}. Code
+// headings are the page's level 2 to 6 headings as {id, text}. On a
+// versioned site each version gets its own index, /<name>/search-index.json
+// for older versions. Code
 // blocks are left out of the text. The built-in theme's search box reads
 // this index.
 type Search struct {
@@ -105,7 +107,7 @@ func truncate(s string, n int) string {
 }
 
 func (s *Search) OnBuildComplete(v plugin.SiteView, out plugin.Outputs) error {
-	docs := []searchDoc{}
+	byVersion := map[string][]searchDoc{s.site.Version: {}}
 	for _, p := range v.Pages() {
 		d, ok := s.docs[p.URL]
 		if !ok || p.Draft {
@@ -113,13 +115,22 @@ func (s *Search) OnBuildComplete(v plugin.SiteView, out plugin.Outputs) error {
 		}
 		d.URL = render.RelURL(s.site.BaseURL, p.URL)
 		d.Title = p.Title
-		docs = append(docs, d)
+		byVersion[p.Version] = append(byVersion[p.Version], d)
 	}
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(docs); err != nil {
-		return err
+	for version, docs := range byVersion {
+		file := "search-index.json"
+		if version != s.site.Version {
+			file = version + "/" + file
+		}
+		var buf bytes.Buffer
+		enc := json.NewEncoder(&buf)
+		enc.SetEscapeHTML(false)
+		if err := enc.Encode(docs); err != nil {
+			return err
+		}
+		if err := out.Add(file, buf.Bytes()); err != nil {
+			return err
+		}
 	}
-	return out.Add("search-index.json", buf.Bytes())
+	return nil
 }

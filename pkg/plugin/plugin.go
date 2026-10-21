@@ -116,7 +116,8 @@ type Reporter interface {
 // Page is a page being built. A plugin receives only the page it is
 // called for.
 type Page struct {
-	SourcePath string         // relative to contentDir, forward slashes
+	SourcePath string         // relative to its version's content directory, forward slashes
+	Version    string         // the page's version; "" on an unversioned site
 	URL        string         // "/docs/setup/"
 	Front      FrontMatter    // typed front matter
 	Data       map[string]any // plugin-added values, e.g. "readingTime", "toc"
@@ -160,13 +161,15 @@ type SiteInfo struct {
 	Description string
 	BaseURL     string // always ends in "/"
 	Language    string
-	Dev         bool // building for tryck dev
+	Version     string // the current version's name; "" on an unversioned site
+	Dev         bool   // building for tryck dev
 }
 
 // PageInfo is a read-only copy of a page for templates and SiteView.
 // Changing it does not affect the build.
 type PageInfo struct {
 	SourcePath  string
+	Version     string // "" on an unversioned site
 	Title       string
 	NavTitle    string
 	Description string

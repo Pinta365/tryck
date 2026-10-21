@@ -86,6 +86,11 @@ func TestRun(t *testing.T) {
 		{name: "init with dir", args: []string{"init", "mysite"}, wantCode: 0, wantStdout: "cd mysite\n  tryck dev"},
 		{name: "init over existing site", config: "site:\n  title: x\n", args: []string{"init"}, wantCode: 1, wantStderr: "already contains tryck.config.yaml"},
 		{name: "init too many args", args: []string{"init", "a", "b"}, wantCode: 2, wantStderr: `unexpected argument "b"`},
+		{name: "snapshot", args: []string{"snapshot", "v1"}, wantCode: 0, wantStdout: "Copied content/ to versions/v1/ (1 files)."},
+		{name: "snapshot lists older versions", config: "versions:\n  current: v3\n  older:\n    - name: v2\n", args: []string{"snapshot", "v3"}, wantCode: 0, wantStdout: "  older:\n    - name: v3\n    - name: v2\n"},
+		{name: "snapshot needs a name", args: []string{"snapshot"}, wantCode: 2, wantStderr: "give the version a name"},
+		{name: "snapshot bad name", args: []string{"snapshot", "v/1"}, wantCode: 2, wantStderr: "give the version a name"},
+		{name: "snapshot existing version", config: "versions:\n  current: v3\n  older:\n    - name: v2\n", args: []string{"snapshot", "v2"}, wantCode: 2, wantStderr: "v2 is already an older version"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
