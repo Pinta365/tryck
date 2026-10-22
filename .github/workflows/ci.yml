@@ -25,6 +25,6 @@ jobs:
       - run: go test -race ./...
       - run: CGO_ENABLED=0 go build ./cmd/tryck
       - name: Docs build
-        run: go run ./cmd/tryck build --config docs/tryck.config.yaml
+        run: go run ./cmd/tryck build --config docs/tryck.config.yaml --strict
       - name: Benchmark (1,000 pages)
         run: go test -run '^$' -bench Build1000Pages -benchtime 3x ./internal/build

@@ -55,3 +55,15 @@ When the base URL has a path, tryck prefixes every internal link and the sitemap
 ## The 404 page
 
 tryck always writes `404.html` to the output root. Cloudflare Pages and GitHub Pages serve it for unknown paths without extra configuration. A custom `404` layout changes the page.
+
+## Checking pull requests
+
+Build the site in CI for every pull request, with `--strict` so warnings fail the check too:
+
+```yaml
+      - name: Check the docs
+        run: ./tryck build --strict
+```
+
+Broken links, broken anchors, unknown config keys and other problems then show up in the pull request, with their file and line, before they reach the published site.
+

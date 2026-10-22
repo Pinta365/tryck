@@ -51,7 +51,7 @@ The `linkCheck` plugin checks every internal link after all pages and generated 
 When a broken link is close to an existing page, the message suggests the closest URL. See [Diagnostics](../07-diagnostics.md) for the message format.
 
 :::tip
-Run `tryck build` in CI for pull requests: with the default settings, a single broken link fails the build.
+Run `tryck build --strict` in CI for pull requests. A broken link fails any build with the default settings; `--strict` also fails on warnings such as a missing `#fragment`.
 :::
 
 ## Subpath deploys

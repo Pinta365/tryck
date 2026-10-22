@@ -50,7 +50,7 @@ const (
 const usage = `tryck builds static documentation sites from Markdown.
 
 Usage:
-  tryck build [--config tryck.config.yaml] [--output ./dist] [--drafts] [--base-url URL] [--workers N] [--verbose]
+  tryck build [--config tryck.config.yaml] [--output ./dist] [--drafts] [--base-url URL] [--workers N] [--strict] [--verbose]
   tryck dev   [--config tryck.config.yaml] [--port 8080] [--host 127.0.0.1] [--open] [--verbose]
   tryck init  [dir]
   tryck snapshot [--config tryck.config.yaml] <name>
@@ -170,6 +170,7 @@ func runBuild(args []string, stdout, stderr io.Writer, plugins []plugin.Plugin) 
 	baseURL := fs.String("base-url", "", "site base URL (overrides site.baseUrl)")
 	workers := fs.Int("workers", 0, "parallel workers, 0 = number of CPUs (overrides build.workers)")
 	verbose := fs.Bool("verbose", false, "debug logging with per-stage timings")
+	strict := fs.Bool("strict", false, "fail on warnings too, for CI")
 	if code, ok := parseFlags(fs, args, 0, stderr); !ok {
 		return code
 	}
@@ -209,17 +210,6 @@ func runBuild(args []string, stdout, stderr io.Writer, plugins []plugin.Plugin) 
 	}
 	log.Debug("site built", "pages", len(site.Pages), "duration", time.Since(start))
 
-	var st output.Stats
-	if !site.HasErrors() {
-		emitStart := time.Now()
-		st, err = output.Write(site)
-		if err != nil {
-			fmt.Fprintf(stderr, "tryck build: %v\n", err)
-			return exitBuild
-		}
-		log.Debug("stage done", "stage", "emit", "duration", time.Since(emitStart), "files", st.Pages+st.Copied)
-	}
-
 	warnings, errs := 0, 0
 	for _, d := range append(cfgDiags, site.Diags...) {
 		switch d.Severity {
@@ -229,9 +219,25 @@ func runBuild(args []string, stdout, stderr io.Writer, plugins []plugin.Plugin) 
 			errs++
 		}
 	}
+	failed := errs > 0 || (*strict && warnings > 0)
+
+	var st output.Stats
+	if !failed {
+		emitStart := time.Now()
+		st, err = output.Write(site)
+		if err != nil {
+			fmt.Fprintf(stderr, "tryck build: %v\n", err)
+			return exitBuild
+		}
+		log.Debug("stage done", "stage", "emit", "duration", time.Since(emitStart), "files", st.Pages+st.Copied)
+	}
+
 	fmt.Fprintf(stdout, "Built %d pages, copied %d files, %d warnings, %d errors in %s\n",
 		len(site.Pages), st.Copied, warnings, errs, roundDuration(time.Since(start)))
-	if errs > 0 {
+	if failed {
+		if errs == 0 {
+			fmt.Fprintf(stderr, "tryck build: --strict: %d warnings fail the build; nothing was written\n", warnings)
+		}
 		return exitBuild
 	}
 	return exitOK

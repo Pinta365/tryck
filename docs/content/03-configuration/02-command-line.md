@@ -25,6 +25,7 @@ Builds the site and writes it to `outputDir`.
 | `--drafts` | bool | `false` | Include draft pages; overrides `build.drafts`. |
 | `--base-url` | string | | Site base URL; overrides `site.baseUrl`. |
 | `--workers` | int | `0` | Parallel workers; `0` uses one per CPU. Overrides `build.workers`. |
+| `--strict` | bool | `false` | Fail on warnings too: they are counted like errors, nothing is written, and the exit code is `1`. For CI. |
 | `--verbose` | bool | `false` | Debug logging with per-stage timings, and info diagnostics. |
 
 The final line reports the result:
@@ -85,7 +86,7 @@ Prints `tryck <version>`. `tryck --version` and `tryck -version` do the same.
 | Code | Meaning |
 | :- | :- |
 | `0` | Success. The build may still have reported warnings. |
-| `1` | Build errors: the build reported errors and nothing was written, or writing the output failed. `tryck init` also exits `1` when it cannot create the site. |
+| `1` | Build errors, or warnings with `--strict`: the build reported errors and nothing was written, or writing the output failed. `tryck init` also exits `1` when it cannot create the site. |
 | `2` | Usage or config errors: an unknown command, a bad flag, an unreadable or invalid config. |
 
 An unknown command prints `tryck: unknown command "<name>"` and the usage text, then exits `2`.

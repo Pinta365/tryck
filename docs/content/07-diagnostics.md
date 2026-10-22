@@ -27,7 +27,7 @@ content/guide/intro.md:12: error[link.broken]: /guide/setup/ does not exist (did
 | Severity | Meaning |
 | :- | :- |
 | `info` | A note, such as a duplicated heading ID that was made unique. Hidden unless you pass `--verbose`. |
-| `warning` | Something to look at. Warnings do not fail a build. |
+| `warning` | Something to look at. Warnings do not fail a build, unless you pass `--strict`. |
 | `error` | A build error. `tryck build` reports every error, writes nothing and exits with code 1. |
 
 Diagnostics go to standard error, sorted by file, line and column.

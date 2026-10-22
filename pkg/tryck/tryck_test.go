@@ -73,6 +73,14 @@ func TestRun(t *testing.T) {
 			wantStdout: "Built 1 pages",
 		},
 		{name: "build invalid base-url flag", args: []string{"build", "--base-url", "ftp://x"}, wantCode: 2, wantStderr: "site.baseUrl"},
+		{name: "strict fails on warnings", args: []string{"build", "--strict"}, wantCode: 1, wantStdout: "1 warnings, 0 errors", wantStderr: "--strict: 1 warnings fail the build; nothing was written"},
+		{
+			name:       "strict passes a clean build",
+			config:     "site:\n  title: x\n  baseUrl: https://example.com/\n",
+			args:       []string{"build", "--strict"},
+			wantCode:   0,
+			wantStdout: "0 warnings, 0 errors",
+		},
 		{name: "build verbose logs config", args: []string{"build", "--verbose"}, wantCode: 0, wantStderr: "config loaded"},
 		{
 			name:       "info diagnostics need verbose",
@@ -166,5 +174,24 @@ func TestResolveVersion(t *testing.T) {
 		if got := resolveVersion(tt.stamped, tt.info); got != tt.want {
 			t.Errorf("resolveVersion(%q) = %q, want %q", tt.stamped, got, tt.want)
 		}
+	}
+}
+
+func TestStrictWritesNothing(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "content"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "content", "a.md"), []byte("# A\n\n[x](#missing)\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, stderr := runIn(t, dir, "build", "--strict"); code != 1 || !strings.Contains(stderr, "warning[") {
+		t.Fatalf("code %d, stderr %q", code, stderr)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "dist")); !os.IsNotExist(err) {
+		t.Error("a failed strict build must not write dist/")
+	}
+	if code, _, _ := runIn(t, dir, "build"); code != 0 {
+		t.Error("without --strict, warnings do not fail the build")
 	}
 }

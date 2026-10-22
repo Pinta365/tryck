@@ -32,13 +32,13 @@ go install github.com/Pinta365/tryck/cmd/tryck@latest
 ## Commands
 
 ```
-tryck build [--config tryck.config.yaml] [--output ./dist] [--drafts] [--base-url URL] [--workers N] [--verbose]
+tryck build [--config tryck.config.yaml] [--output ./dist] [--drafts] [--base-url URL] [--workers N] [--strict] [--verbose]
 tryck dev   [--config tryck.config.yaml] [--port 8080] [--host 127.0.0.1] [--open] [--verbose]
 tryck init  [dir]
 tryck version
 ```
 
-Exit codes: `0` success, `1` build errors, `2` usage or config errors. CLI flags override the config file, which overrides built-in defaults.
+Exit codes: `0` success, `1` build errors (or warnings with `--strict`), `2` usage or config errors. CLI flags override the config file, which overrides built-in defaults.
 
 ## Content
 

@@ -27,7 +27,7 @@ jobs:
       - id: pages
         uses: actions/configure-pages@v6
       - name: Build
-        run: go run ./cmd/tryck build --config docs/tryck.config.yaml --base-url "${{ steps.pages.outputs.base_url }}/"
+        run: go run ./cmd/tryck build --config docs/tryck.config.yaml --strict --base-url "${{ steps.pages.outputs.base_url }}/"
       - uses: actions/upload-pages-artifact@v5
         with:
           path: docs/dist
