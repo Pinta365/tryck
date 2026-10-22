@@ -60,6 +60,7 @@ type TemplateData struct {
 	Stylesheets []string          // site paths of plugin CSS to link in <head>
 	Theme       ThemeData         // theme settings from the config
 	SearchIndex string            // site path of the search index, "" if search is off
+	EditURL     string            // where to edit this page's source, with theme.editUrl
 	Version     *VersionLink      // the page's version; nil on an unversioned site
 	Versions    []VersionLink     // every version, the current one first; nil on an unversioned site
 	Dev         bool              // true in tryck dev

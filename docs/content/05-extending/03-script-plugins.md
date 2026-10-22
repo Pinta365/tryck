@@ -5,7 +5,7 @@ description: Write plugins in JavaScript, in your site, with nothing to install 
 
 A JavaScript file in `plugins/` is a plugin. tryck runs it with a built-in JavaScript engine, so there is nothing to install or compile: the stock `tryck` binary picks it up, in `tryck build` and `tryck dev` alike. Script plugins have the same hooks as [Go plugins](05-go-plugins/_index.md): they can add data to pages, change the rendered HTML, write extra files and report diagnostics.
 
-This site uses one. `plugins/edit-link.js` adds the "Edit this page on GitHub" link at the end of every page:
+For example, this script adds an "Edit this page on GitHub" link at the end of every page. (The built-in theme can do this on its own with [`theme.editUrl`](../04-themes/01-built-in-theme.md); the script shows how it works.)
 
 ```js
 // Adds an "Edit this page" link to the end of every page's article.
@@ -75,7 +75,7 @@ flowchart LR
 - `site.hasFile(path)`: whether a site path such as `/img/logo.png` exists,
 - `site.hasAnchor(url, id)`: whether a page has an element with that ID.
 
-In `onBuildComplete`, `site.pages` lists every page (`url`, `sourcePath`, `title`, `navTitle`, `description`, `date`, `draft`, `weight`, `aliases`, `params`, `data`), sorted by URL, and `site.nav` is the navigation tree (`title`, `url`, `section`, `draft`, `children`).
+In `onBuildComplete`, `site.pages` lists every page (`url`, `sourcePath`, `title`, `navTitle`, `description`, `date`, `lastUpdated`, `draft`, `weight`, `aliases`, `params`, `data`), sorted by URL, and `site.nav` is the navigation tree (`title`, `url`, `section`, `draft`, `children`).
 
 **`page`** in the page hooks holds:
 

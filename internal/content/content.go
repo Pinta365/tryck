@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -26,6 +27,8 @@ type Page struct {
 	Title   string   // front matter title, first h1, or file name
 	HasH1   bool     // the body contains a level-1 heading
 	Hash    [32]byte // SHA-256 of the source file
+
+	LastUpdated time.Time // last commit date, with build.lastUpdated
 }
 
 // Asset is a non-Markdown file inside contentDir, copied next to pages.

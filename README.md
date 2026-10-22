@@ -11,6 +11,7 @@ Documentation: <https://tryck.pinta.land/>.
 - **Themes**: configure the built-in theme (accent, logo, light/dark, header links, footer, extra CSS) or package your own in a theme folder.
 - **Extensible without a build step**: custom `:::` directives from templates and plugins in JavaScript, run by the stock binary. Go plugins for everything else.
 - **Versioned docs**: older releases under `/v1/`, `/v2/` next to the current docs, with a version picker; `tryck snapshot` freezes a release.
+- **Reader extras**: copy buttons on code blocks, heading anchors, "Edit this page" links and "Last updated" dates from git.
 - **Live reload**: `tryck dev` rebuilds in memory, reloads the browser and shows build errors as an overlay.
 - **No runtime dependencies**: one static binary, no Node or Python in CI.
 

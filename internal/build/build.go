@@ -81,6 +81,7 @@ type builder struct {
 	pages       []*content.Page
 	versions    []config.Version             // the current version first
 	bySource    map[string]map[string]string // version -> source path -> URL
+	git         *gitDates                    // with build.lastUpdated
 }
 
 // Build runs the pipeline. It always returns a Site; check HasErrors.
@@ -145,11 +146,12 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	b.tmpl = tmpl
 
 	b.md = markdown.New(markdown.Options{
-		UnsafeHTML: cfg.Build.UnsafeHTML,
-		Extenders:  plugins.Each[plugin.MarkdownExtender](set),
-		Directives: directives,
-		Templates:  b.directiveTemplates(directives),
-		SitePath:   func(p string) string { return render.RelURL(cfg.Site.BaseURL, p) },
+		UnsafeHTML:     cfg.Build.UnsafeHTML,
+		HeadingAnchors: cfg.Defaults.HeadingAnchors,
+		Extenders:      plugins.Each[plugin.MarkdownExtender](set),
+		Directives:     directives,
+		Templates:      b.directiveTemplates(directives),
+		SitePath:       func(p string) string { return render.RelURL(cfg.Site.BaseURL, p) },
 	})
 	b.theme = b.themeData()
 
@@ -161,6 +163,13 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	}
 	var sources []source
 	links := map[string]*linkResolver{}
+	if cfg.Build.LastUpdated {
+		var dirs []string
+		for _, v := range b.versions {
+			dirs = append(dirs, v.Dir)
+		}
+		b.git = readGitDates(cfg.Root, dirs)
+	}
 	for _, v := range b.versions {
 		if fi, err := os.Stat(v.Dir); !v.Current && (err != nil || !fi.IsDir()) {
 			b.dc.Errorf(cfg.Path, 0, 0, "config.invalid", "version %s: %s is not a directory; create it with tryck snapshot %s", v.Name, b.rel(v.Dir), v.Name)
@@ -344,6 +353,7 @@ func (b *builder) readPage(v config.Version, rel string) *content.Page {
 	p.Data = map[string]any{}
 	p.Diags = reporter{&b.dc, file}
 	p.Version = v.Name
+	p.LastUpdated = b.git.of(abs)
 	p.URL = versionPath(v.Prefix, content.URLFor(rel, front.Slug))
 	p.OutPath = content.OutputPath(p.URL)
 	if !v.Current {
@@ -438,6 +448,9 @@ func (b *builder) render(p *content.Page) ([]byte, bool) {
 		Theme:       b.theme,
 		SearchIndex: b.searchIndexFor(p.Version),
 		Dev:         b.opts.Dev,
+	}
+	if base := b.cfg.Theme.EditURL; base != "" {
+		data.EditURL = strings.TrimSuffix(base, "/") + "/" + p.File
 	}
 	data.Versions, data.Version = b.versionLinks(p.Version, p.SourcePath)
 	var buf bytes.Buffer
@@ -587,6 +600,7 @@ func pageInfo(p *content.Page) *plugin.PageInfo {
 		Description: p.Front.Description,
 		URL:         p.URL,
 		Date:        p.Front.Date,
+		LastUpdated: p.LastUpdated,
 		Draft:       p.Front.Draft,
 		Weight:      p.Front.Weight,
 		TitleInBody: p.HasH1,

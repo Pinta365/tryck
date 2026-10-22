@@ -15,6 +15,7 @@ tryck ships one theme. It is configured in the `theme` section of the config fil
 | `colorScheme` | `auto` | `auto`, `light` or `dark`. See below. |
 | `nav` | `[]` | Header links, each with a `title` and `url`. |
 | `footer` | `""` | Inline Markdown shown at the bottom of every page. |
+| `editUrl` | `""` | Adds an "Edit this page" link to each page. See below. |
 | `css` | `[]` | Extra stylesheets, linked after the theme's own, so they win. |
 | `params` | `{}` | Free-form values for custom themes, available as `.Theme.Params`. |
 
@@ -30,6 +31,26 @@ theme:
 ```
 
 `accent` and `accentDark` must be CSS colours: a hex value, a colour name, or a function like `rgb(11 122 90)` or `oklch(0.6 0.1 160)`. Anything that could end the CSS declaration is rejected with a `config.invalid` error.
+
+## Page extras
+
+The built-in theme adds a few things readers expect on a docs page:
+
+- **Copy buttons** on code blocks copy the code without line numbers. They show on hover or keyboard focus, and always on touch screens.
+- **Heading anchors**: a `#` next to every heading below the page title links to that section. Turn them off with `defaults.headingAnchors: false`.
+- **Edit this page**: set `theme.editUrl` to the URL that edits a file in your repository, up to the project root. tryck appends each page's path from there:
+
+  ```yaml
+  theme:
+    editUrl: https://github.com/you/project/edit/main/
+  ```
+
+  `content/guide/setup.md` then links to `https://github.com/you/project/edit/main/content/guide/setup.md`. If the site is in a subfolder of the repository, such as `docs/`, include it: `.../edit/main/docs/`.
+- **Last updated**: with `build.lastUpdated: true`, each page shows the date of the last commit that changed its file. tryck reads it with one `git log` when it builds; without git or a repository, pages simply show no date.
+
+  :::warning[Shallow clones]
+  CI checkouts are often shallow, so every file looks changed by the latest commit. On GitHub Actions, check out with `fetch-depth: 0`.
+  :::
 
 ## Colour scheme
 

@@ -175,6 +175,7 @@ type PageInfo struct {
 	Description string
 	URL         string
 	Date        time.Time
+	LastUpdated time.Time // the file's last commit date, with build.lastUpdated; zero otherwise
 	Draft       bool
 	Weight      int
 	TitleInBody bool           // the body has its own h1, so layouts skip theirs

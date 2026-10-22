@@ -61,7 +61,8 @@ type BuildConfig struct {
 	CleanOutput bool   `yaml:"cleanOutput"`
 	Drafts      bool   `yaml:"drafts"`
 	UnsafeHTML  bool   `yaml:"unsafeHTML"`
-	Workers     int    `yaml:"workers"` // 0 = runtime.NumCPU()
+	LastUpdated bool   `yaml:"lastUpdated"` // read each page's last commit date from git
+	Workers     int    `yaml:"workers"`     // 0 = runtime.NumCPU()
 }
 
 type DefaultsConfig struct {
@@ -69,6 +70,8 @@ type DefaultsConfig struct {
 	TOC        bool   `yaml:"toc"`
 	TOCDepth   [2]int `yaml:"tocDepth"` // min and max heading level
 	DateFormat string `yaml:"dateFormat"`
+	// HeadingAnchors adds a "#" link to every heading below h1.
+	HeadingAnchors bool `yaml:"headingAnchors"`
 }
 
 // ThemeConfig selects an optional theme folder and sets the options of
@@ -82,6 +85,7 @@ type ThemeConfig struct {
 	ColorScheme string         `yaml:"colorScheme"` // auto (with a toggle), light or dark
 	Nav         []NavLink      `yaml:"nav"`         // header links
 	Footer      string         `yaml:"footer"`      // inline Markdown
+	EditURL     string         `yaml:"editUrl"`     // prefix for "Edit this page" links; the file's path from the project root follows
 	CSS         []string       `yaml:"css"`         // extra stylesheets, linked after the theme's
 	Params      map[string]any `yaml:"params"`      // free-form values for custom themes
 }
@@ -151,10 +155,11 @@ func Defaults() *Config {
 			CleanOutput: true,
 		},
 		Defaults: DefaultsConfig{
-			Layout:     "doc",
-			TOC:        true,
-			TOCDepth:   [2]int{2, 3},
-			DateFormat: "2006-01-02",
+			Layout:         "doc",
+			TOC:            true,
+			TOCDepth:       [2]int{2, 3},
+			DateFormat:     "2006-01-02",
+			HeadingAnchors: true,
 		},
 		Theme: ThemeConfig{ColorScheme: "auto"},
 		Plugins: map[string]map[string]any{
@@ -498,6 +503,9 @@ func (c *Config) Validate() []diag.Diagnostic {
 		if v != "" && !cssColorRE.MatchString(v) {
 			bad("%s %q is not a CSS color", name, v)
 		}
+	}
+	if u, err := url.Parse(c.Theme.EditURL); c.Theme.EditURL != "" && (err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "") {
+		bad("theme.editUrl %q must be an http(s) URL", c.Theme.EditURL)
 	}
 	for i, l := range c.Theme.Nav {
 		if l.Title == "" || l.URL == "" {

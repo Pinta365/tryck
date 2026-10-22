@@ -69,6 +69,10 @@ plugins:
 
 To run offline, save the mermaid module under `static/` and point `url` at that site path, for example `/js/mermaid.esm.min.mjs`. An empty `url` is a `plugin.config` error. The diagram is redrawn when the page switches between light and dark.
 
+## Copying code
+
+In the built-in theme every code block gets a **Copy** button, which copies the code without line numbers.
+
 ## Heading IDs
 
 Every heading gets an ID derived from its text, so you can link to `#a-heading`. The text is lowercased, letters and digits are kept (including non-ASCII), runs of spaces, dashes and underscores become a single dash, and other punctuation is dropped:
@@ -86,4 +90,4 @@ To choose the ID yourself, add an attribute to the heading:
 ## Install {#installation}
 ```
 
-Now the heading's ID is `installation`. Custom IDs are also what the `toc` plugin and anchor checking use.
+Now the heading's ID is `installation`. Every heading below the page title also gets a `#` link to its ID, shown on hover, for linking to that section; `defaults.headingAnchors: false` turns these off. Custom IDs are also what the `toc` plugin and anchor checking use.

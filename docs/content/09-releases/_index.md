@@ -5,6 +5,7 @@ weight: 9
 
 What changed in each release of tryck, newest first. Subscribe to the [feed](/feed.xml) to hear about new releases, or watch the [releases page](https://github.com/Pinta365/tryck/releases) on GitHub.
 
+- [v0.5.0](v0.5.0.md): copy buttons, heading anchors, edit links and last-updated dates
 - [v0.4.2](v0.4.2.md): accessibility, print and layout fixes
 - [v0.4.1](v0.4.1.md): `tryck build --strict`
 - [v0.4.0](v0.4.0.md): versioned docs and Atom/RSS feeds

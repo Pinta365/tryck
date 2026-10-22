@@ -384,6 +384,9 @@ func pageInfoJSON(p *plugin.PageInfo) map[string]any {
 	if !p.Date.IsZero() {
 		m["date"] = p.Date
 	}
+	if !p.LastUpdated.IsZero() {
+		m["lastUpdated"] = p.LastUpdated
+	}
 	return m
 }
 

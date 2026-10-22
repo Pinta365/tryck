@@ -42,7 +42,7 @@
 <main class="content">
 <article class="doc">
 <h1>Setup &amp; install</h1>
-<h2 id="requirements">Requirements</h2>
+<h2 id="requirements">Requirements<a class="heading-anchor" href="#requirements" aria-label="Link to this section">#</a></h2>
 <table>
 <thead>
 <tr>
@@ -63,8 +63,8 @@
 </ul>
 <pre class="chroma"><code><span class="line"><span class="ln">1</span><span class="cl"><span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;hi&#34;</span><span class="p">)</span><span class="w">
 </span></span></span></code></pre><!-- raw HTML omitted -->
-<h2 id="requirements-1">Requirements</h2>
-<h2 id="my-id">Custom</h2>
+<h2 id="requirements-1">Requirements<a class="heading-anchor" href="#requirements-1" aria-label="Link to this section">#</a></h2>
+<h2 id="my-id">Custom<a class="heading-anchor" href="#my-id" aria-label="Link to this section">#</a></h2>
 <p><img src="/basic/guide/diagram.png" alt="diagram"> <a href="https://example.org">https://example.org</a></p>
 <p>Back to <a href="/basic/">home</a> or the <a href="#my-id">custom heading</a>.</p>
 
@@ -99,6 +99,32 @@ const tryckScrollables = () => {
 };
 tryckScrollables();
 addEventListener("resize", tryckScrollables);
+
+if (navigator.clipboard) {
+  for (const pre of document.querySelectorAll("pre:not(.mermaid)")) {
+    const wrap = document.createElement("div");
+    wrap.className = "code-block";
+    pre.replaceWith(wrap);
+    wrap.append(pre);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "copy-code";
+    button.textContent = "Copy";
+    button.setAttribute("aria-label", "Copy code");
+    button.addEventListener("click", async () => {
+      const code = pre.cloneNode(true);
+      code.querySelectorAll(".ln, .lnt").forEach((n) => n.remove());
+      try {
+        await navigator.clipboard.writeText(code.textContent.replace(/\n$/, ""));
+        button.textContent = "Copied";
+      } catch {
+        button.textContent = "Failed";
+      }
+      setTimeout(() => (button.textContent = "Copy"), 2000);
+    });
+    wrap.append(button);
+  }
+}
 
 (() => {
   const toggle = document.querySelector(".nav-toggle");

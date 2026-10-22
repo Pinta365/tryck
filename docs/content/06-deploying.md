@@ -19,7 +19,7 @@ The workflow downloads `tryck_linux_amd64.tar.gz` for a pinned `TRYCK_VERSION`, 
 
 ```yaml
 env:
-  TRYCK_VERSION: v0.4.2
+  TRYCK_VERSION: v0.5.0
 ```
 
 ```sh
@@ -47,6 +47,16 @@ tryck build
 ```
 
 A host that serves from the site root needs only `baseUrl: "/"`. A host that serves from a subpath needs the full subpath, for example `baseUrl: "/docs/"` or `https://example.com/docs/`.
+
+## Last-updated dates
+
+With `build.lastUpdated: true`, tryck reads each page's last commit date from git. A shallow clone makes every page look changed by the latest commit, so fetch the full history in CI:
+
+```yaml
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+```
 
 ## Subpath sites
 

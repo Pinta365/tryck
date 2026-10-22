@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/xml"
 	"net/url"
 
@@ -42,8 +43,8 @@ func (s *Sitemap) OnBuildComplete(v plugin.SiteView, out plugin.Outputs) error {
 			continue
 		}
 		e := sitemapURL{Loc: render.AbsURL(s.site.BaseURL, p.URL)}
-		if !p.Date.IsZero() {
-			e.LastMod = p.Date.Format("2006-01-02")
+		if d := cmp.Or(p.Date, p.LastUpdated); !d.IsZero() {
+			e.LastMod = d.Format("2006-01-02")
 		}
 		urls = append(urls, e)
 	}

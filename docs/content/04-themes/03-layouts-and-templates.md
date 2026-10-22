@@ -74,7 +74,7 @@ Every layout is executed with these fields:
 | Field | Type | Meaning |
 | :- | :- | :- |
 | `.Site` | SiteInfo | `Title`, `Description`, `BaseURL` (ends in `/`), `Language`, `Dev`. |
-| `.Page` | PageInfo | The current page: `Title`, `NavTitle`, `Description`, `URL`, `Date`, `Draft`, `Weight`, `TitleInBody`, `Aliases`, `Params`, `Data`, `SourcePath`. |
+| `.Page` | PageInfo | The current page: `Title`, `NavTitle`, `Description`, `URL`, `Date`, `LastUpdated`, `Draft`, `Weight`, `TitleInBody`, `Aliases`, `Params`, `Data`, `SourcePath`. |
 | `.Content` | HTML | The rendered Markdown body. |
 | `.Nav` | NavNode | The navigation tree, with `Active` and `InPath` set for this page. Children are in `.Children`. |
 | `.TOC` | list of TOCEntry | The table of contents (`.Level`, `.ID`, `.Text`, `.Children`), or empty. |
@@ -82,6 +82,7 @@ Every layout is executed with these fields:
 | `.Stylesheets` | list of strings | Site paths of plugin CSS, for example `/css/chroma.css`. |
 | `.Version` | VersionLink | The page's version: `Name`, `URL`, `Current`. Empty on an unversioned site. |
 | `.Versions` | list of VersionLink | Every version, the current one first, with `Name`, `URL` (this page in that version, or its home page), `Current` and `Active`. |
+| `.EditURL` | string | Where to edit the page's source file, with `theme.editUrl`; empty otherwise. |
 | `.SearchIndex` | string | Site path of the search index, or empty when the search plugin is off. |
 | `.Theme` | ThemeData | `Accent`, `AccentDark`, `Logo`, `ColorScheme`, `Nav`, `Footer`, `CSS`, `Params`. |
 | `.Dev` | bool | True while `tryck dev` is serving. |

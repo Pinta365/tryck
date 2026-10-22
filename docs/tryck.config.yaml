@@ -3,6 +3,9 @@ site:
   description: A single-binary static site generator for technical documentation.
   baseUrl: "https://tryck.pinta.land/"
 
+build:
+  lastUpdated: true
+
 theme:
   path: themes/pinta
   nav:
@@ -10,5 +13,6 @@ theme:
       url: https://github.com/Pinta365/tryck
   footer: "MIT licensed. Built with [tryck](https://github.com/Pinta365/tryck)."
   css: [/css/docs.css]
+  editUrl: https://github.com/Pinta365/tryck/edit/main/docs/
   params:
     brandSuffix: docs

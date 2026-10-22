@@ -93,7 +93,7 @@ details.details > summary { cursor: pointer; font-weight: 600; }
 .js .tab-list[hidden] { display: flex; }
 .js .tabs:not(.tabs-js) > .tab-panel ~ .tab-panel, .js .tabs:not(.tabs-js) .tab-label { display: none; }
 @media print {
-  .site-header, .sidebar, .toc, .pager, .nav-toggle, .search, .theme-toggle, .tab-list { display: none !important; }
+  .site-header, .sidebar, .toc, .pager, .nav-toggle, .search, .theme-toggle, .tab-list, .heading-anchor, .copy-code, .edit-link { display: none !important; }
   .layout { display: block; max-width: none; }
   .content { max-width: none; padding: 0; }
   .tab-panel[hidden], .tabs .tab-panel { display: block !important; }
@@ -110,6 +110,14 @@ details.details > summary { cursor: pointer; font-weight: 600; }
 .versions a { display: block; padding: 0.3rem 0.6rem; border-radius: 4px; color: var(--fg); text-decoration: none; white-space: nowrap; }
 .versions a:hover, .versions a[aria-current] { background: var(--bg-alt); }
 .versions-current { color: var(--muted); font-size: 0.8rem; }
+.heading-anchor { margin-left: 0.4rem; color: var(--muted); font-weight: 400; text-decoration: none; opacity: 0; }
+:is(h2, h3, h4, h5, h6):hover > .heading-anchor, .heading-anchor:focus { opacity: 1; }
+@media (hover: none) { .heading-anchor { opacity: 0.6; } }
+.code-block { position: relative; }
+.copy-code { position: absolute; top: 0.4rem; right: 0.4rem; padding: 0.15rem 0.5rem; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--muted); font: inherit; font-size: 0.75rem; cursor: pointer; opacity: 0; }
+.code-block:hover .copy-code, .copy-code:focus { opacity: 1; }
+@media (hover: none) { .copy-code { opacity: 1; } }
+.page-meta { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; margin-top: 2rem; color: var(--muted); font-size: 0.875rem; }
 .search[hidden] { display: none; }
 .search-open { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.6rem; border: 1px solid var(--line); border-radius: 6px; background: none; color: var(--muted); font: inherit; font-size: 0.9rem; cursor: pointer; }
 .search-open:hover { color: var(--fg); }

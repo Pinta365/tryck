@@ -376,3 +376,13 @@ func TestVersions(t *testing.T) {
 		}
 	}
 }
+
+func TestEditURLValidate(t *testing.T) {
+	cfg := Defaults()
+	for url, ok := range map[string]bool{"": true, "https://github.com/a/b/edit/main/": true, "github.com/a/b": false, "ftp://x/": false} {
+		cfg.Theme.EditURL = url
+		if got := len(cfg.Validate()) == 0; got != ok {
+			t.Errorf("editUrl %q: valid = %v, want %v", url, got, ok)
+		}
+	}
+}

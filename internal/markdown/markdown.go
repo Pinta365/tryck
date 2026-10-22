@@ -11,8 +11,10 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 
 	"github.com/Pinta365/tryck/internal/diag"
 	"github.com/Pinta365/tryck/pkg/plugin"
@@ -23,6 +25,8 @@ type Options struct {
 	// UnsafeHTML passes raw HTML in Markdown through. Otherwise it is
 	// replaced by an HTML comment.
 	UnsafeHTML bool
+	// HeadingAnchors adds a "#" link to every heading below h1.
+	HeadingAnchors bool
 	// Extenders add goldmark extensions, such as syntax highlighting.
 	Extenders []plugin.MarkdownExtender
 	// Directives render ::: names tryck does not know, by name.
@@ -56,6 +60,9 @@ func New(opts Options) *Processor {
 			parser.WithAttribute(),     // {#custom-id} wins over the generated ID
 		),
 	}, rendererOpts...)...)
+	if opts.HeadingAnchors {
+		md.Renderer().AddOptions(renderer.WithNodeRenderers(util.Prioritized(headingAnchors{}, 100)))
+	}
 	for _, e := range opts.Extenders {
 		e.Extend(md)
 	}

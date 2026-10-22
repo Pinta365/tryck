@@ -23,6 +23,7 @@ build:
   cleanOutput: true
   drafts: false
   unsafeHTML: false
+  lastUpdated: false
   workers: 0
 
 defaults:
@@ -30,6 +31,7 @@ defaults:
   toc: true
   tocDepth: [2, 3]
   dateFormat: "2006-01-02"
+  headingAnchors: true
 
 versions:
   current: ""
@@ -43,6 +45,7 @@ theme:
   colorScheme: "auto"
   nav: []
   footer: ""
+  editUrl: ""
   css: []
   params: {}
 
@@ -103,6 +106,7 @@ Setting one option of a plugin does not drop its other defaults; plugin sections
 | `cleanOutput` | bool | `true` | Empty the output directory before writing. |
 | `drafts` | bool | `false` | Include pages with `draft: true`. |
 | `unsafeHTML` | bool | `false` | Pass raw HTML in Markdown through instead of replacing it with a comment. |
+| `lastUpdated` | bool | `false` | Read each page's last commit date from git: shown as "Last updated" on pages and used as the sitemap's `lastmod`. Needs the full git history, so CI must not use a shallow clone. |
 | `workers` | int | `0` | Parallel workers for parsing and rendering; `0` uses one per CPU. |
 
 The directory keys must not be empty, and `workers` must be `0` or positive.
@@ -115,6 +119,7 @@ The directory keys must not be empty, and `workers` must be `0` or positive.
 | `toc` | bool | `true` | Show a table of contents; a page's `toc` front matter overrides it. |
 | `tocDepth` | `[min, max]` | `[2, 3]` | Heading levels included in the table of contents. Each is `1`–`6` and `min ≤ max`. |
 | `dateFormat` | string | `"2006-01-02"` | Go time layout used by `dateFormat` when no layout is passed. |
+| `headingAnchors` | bool | `true` | Add a `#` link to every heading below the page title, to link to that section. |
 
 ## versions
 
@@ -140,6 +145,7 @@ The `theme` section configures the built-in theme and selects an optional theme 
 | `colorScheme` | string | `"auto"` | `auto` (follows the system, with a toggle), `light` or `dark`. |
 | `nav` | list | `[]` | Header links, each with `title` and `url` (both required). |
 | `footer` | string | `""` | Inline Markdown shown in the site footer. |
+| `editUrl` | string | `""` | Adds an "Edit this page" link. The page's file path from the project root is appended, such as `content/guide/setup.md`. |
 | `css` | list | `[]` | Extra stylesheets, linked after the theme's. With a theme folder, they are added after the folder's own `css`. |
 | `params` | map | `{}` | Free-form values for custom themes, read as `.Theme.Params`. |
 
