@@ -1,5 +1,5 @@
 {{- /* Shown on pages of older versions, with a link to the same page in the current version. */ -}}
 {{- with .Version }}{{ if not .Current }}
-<div class="version-banner" role="note">This is the documentation for {{ .Name }}.
+<div class="version-banner" role="region" aria-label="Version notice">This is the documentation for {{ .Name }}.
 {{- range $.Versions }}{{ if .Current }} <a href="{{ relURL .URL }}">See the current version, {{ .Name }}</a>.{{ end }}{{ end }}</div>
 {{- end }}{{ end -}}

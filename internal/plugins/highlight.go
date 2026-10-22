@@ -3,6 +3,7 @@ package plugins
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"strings"
 
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
@@ -60,7 +61,7 @@ func (h *Highlight) OnBuildComplete(_ plugin.SiteView, out plugin.Outputs) error
 		return err
 	}
 	if h.DarkTheme == "" || h.DarkTheme == h.Theme {
-		return out.Add(chromaCSSPath, light.Bytes())
+		return out.Add(chromaCSSPath, []byte(lineNumberColors(light.String())))
 	}
 	var dark bytes.Buffer
 	if err := f.WriteCSS(&dark, styles.Get(h.DarkTheme)); err != nil {
@@ -78,7 +79,17 @@ func (h *Highlight) OnBuildComplete(_ plugin.SiteView, out plugin.Outputs) error
 		buf.WriteString(scopeCSS(mode.css, `:root:not([data-theme="`+mode.other+`"])`, "  "))
 		buf.WriteString("}\n")
 	}
-	return out.Add(chromaCSSPath, buf.Bytes())
+	return out.Add(chromaCSSPath, []byte(lineNumberColors(buf.String())))
+}
+
+// lnColorRE matches the color of a line-number rule (.ln, .lnt).
+var lnColorRE = regexp.MustCompile(`(\.chroma \.lnt? \{[^}]*?color: )(#[0-9a-fA-F]+)`)
+
+// lineNumberColors lets the theme's --muted text colour set line numbers,
+// keeping the highlighting theme's colour as the fallback. Some themes'
+// line numbers are too faint to read.
+func lineNumberColors(css string) string {
+	return lnColorRE.ReplaceAllString(css, "${1}var(--muted, ${2})")
 }
 
 // scopeCSS prefixes every selector of chroma's one-rule-per-line CSS

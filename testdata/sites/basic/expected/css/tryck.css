@@ -86,6 +86,21 @@ details.details > summary { cursor: pointer; font-weight: 600; }
 .tab-list [role="tab"][aria-selected="true"] { border-bottom-color: var(--accent, var(--link)); color: var(--fg); font-weight: 600; }
 .tab-label { margin: 1rem 0 0.25rem; font-weight: 600; }
 .tabs-js .tab-label { display: none; }
+/* With JavaScript on (the js class is set before the first paint), show
+   the search button and the first tab right away, so nothing jumps when
+   the scripts run. */
+.js .search[hidden] { display: block; }
+.js .tab-list[hidden] { display: flex; }
+.js .tabs:not(.tabs-js) > .tab-panel ~ .tab-panel, .js .tabs:not(.tabs-js) .tab-label { display: none; }
+@media print {
+  .site-header, .sidebar, .toc, .pager, .nav-toggle, .search, .theme-toggle, .tab-list { display: none !important; }
+  .layout { display: block; max-width: none; }
+  .content { max-width: none; padding: 0; }
+  .tab-panel[hidden], .tabs .tab-panel { display: block !important; }
+  .tab-label, .tabs-js .tab-label { display: block !important; }
+  pre, .admonition, table { break-inside: avoid; }
+  pre { white-space: pre-wrap; }
+}
 .version-banner { padding: 0.5rem 1rem; background: var(--bg-alt); border-bottom: 1px solid var(--line); }
 .versions { position: relative; }
 .versions > summary { list-style: none; padding: 0.3rem 0.6rem; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 0.9rem; cursor: pointer; }
@@ -111,11 +126,11 @@ details.details > summary { cursor: pointer; font-weight: 600; }
 .search-results { list-style: none; margin: 0; padding: 0.5rem; overflow-y: auto; }
 .search-results:empty { display: none; }
 .search-results a { display: block; padding: 0.5rem 0.75rem; border-radius: 6px; color: var(--fg); text-decoration: none; }
-.search-results [aria-selected="true"] a, .search-results a:hover { background: var(--bg-alt); }
+.search-results a[aria-selected="true"], .search-results a:hover { background: var(--bg-alt); }
 .search-title { display: block; font-weight: 600; }
 .search-heading { display: block; color: var(--accent, var(--link)); font-size: 0.9rem; }
 .search-snippet { display: block; margin-top: 0.15rem; color: var(--muted); font-size: 0.85rem; }
-.search-results mark { background: color-mix(in srgb, var(--accent, var(--link)) 25%, transparent); color: inherit; border-radius: 2px; }
+.search-results mark { background: color-mix(in srgb, var(--accent, var(--link)) 25%, transparent); color: var(--fg); border-radius: 2px; }
 @media (max-width: 50rem) { .search-open span, .search-open kbd { display: none; } }
 @media (max-width: 72rem) { .toc { display: none; } }
 @media (max-width: 50rem) {

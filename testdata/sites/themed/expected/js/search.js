@@ -157,9 +157,14 @@ const tryckSearch = (() => {
   function render(hits, query) {
     active = -1;
     input.removeAttribute("aria-activedescendant");
-    list.innerHTML = hits
-      .map((hit, i) => `<li id="search-result-${i}" role="option" aria-selected="false">${tryckSearch.resultHTML(hit)}</li>`)
-      .join("");
+    list.innerHTML = hits.map((hit) => `<li role="none">${tryckSearch.resultHTML(hit)}</li>`).join("");
+    // Each result link is an option of the listbox; focus stays in the input.
+    list.querySelectorAll("a").forEach((a, i) => {
+      a.id = `search-result-${i}`;
+      a.setAttribute("role", "option");
+      a.setAttribute("aria-selected", "false");
+      a.tabIndex = -1;
+    });
     input.setAttribute("aria-expanded", String(hits.length > 0));
     status.textContent = query.trim() && !hits.length ? `No results for “${query.trim()}”` : "";
     if (hits.length) select(0);

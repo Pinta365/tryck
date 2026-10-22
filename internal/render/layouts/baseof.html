@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.add("js")</script>
 <title>{{ block "title" . }}{{ if and .Page.Title .Site.Title (ne .Page.Title .Site.Title) }}{{ .Page.Title }} · {{ .Site.Title }}{{ else }}{{ or .Page.Title .Site.Title }}{{ end }}{{ end }}</title>
 {{- with or .Page.Description .Site.Description }}
 <meta name="description" content="{{ . }}">
@@ -35,12 +36,22 @@
 <body>
 {{ partial "header" . }}
 {{- if .Page.Draft }}
-<div class="draft-banner" role="note">Draft: this page is only published when drafts are enabled.</div>
+<div class="draft-banner" role="region" aria-label="Draft notice">Draft: this page is only published when drafts are enabled.</div>
 {{- end }}
 {{- partial "version-banner" . }}
 {{ block "main" . }}<main class="content">{{ .Content }}</main>{{ end }}
 {{ partial "footer" . }}
 <script>
+// Code blocks that scroll sideways get keyboard focus, so they can be
+// scrolled without a mouse. Called again when a tab panel is shown.
+const tryckScrollables = () => {
+  for (const pre of document.querySelectorAll("pre")) {
+    if (pre.scrollWidth > pre.clientWidth) pre.tabIndex = 0;
+    else pre.removeAttribute("tabindex");
+  }
+};
+tryckScrollables();
+addEventListener("resize", tryckScrollables);
 // On narrow screens, fold the sidebar behind the header's Menu button.
 (() => {
   const toggle = document.querySelector(".nav-toggle");
@@ -71,6 +82,7 @@ document.querySelector(".theme-toggle")?.addEventListener("click", () => {
       b.tabIndex = i === j ? 0 : -1;
       if (panels[j]) panels[j].hidden = i !== j;
     });
+    tryckScrollables();
     const group = el.dataset.group;
     if (!sync || !group) return;
     const label = buttons[i].textContent;

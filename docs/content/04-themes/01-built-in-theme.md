@@ -65,6 +65,14 @@ For example, a `static/css/custom.css` listed under `theme.css`:
 
 When `theme.accent` is set, tryck writes `--accent` in an inline `<style>` after all stylesheets, so it wins over an `--accent` set in your CSS. To control the accent from a stylesheet, leave `theme.accent` empty.
 
+## Accessibility and print
+
+The built-in theme is checked with [axe](https://github.com/dequelabs/axe-core) against WCAG 2.2 AA in light and dark mode, including the search box and the version picker. Code blocks that scroll sideways can be scrolled with the keyboard, the search box and tabs work with the keyboard, and the search button, tabs and version picker are in place before the scripts run, so nothing jumps while the page loads.
+
+Printed pages leave out the header, navigation, table of contents and search, show every tab with its label, and wrap long code lines.
+
+If you change colours, keep text at a contrast of at least 4.5:1 against its background. Line numbers in code blocks use `--muted`.
+
 ## A note on files
 
 A file in `static/` with the same path as a theme file replaces it. To replace the built-in stylesheet entirely, add `static/css/tryck.css`. Otherwise, list an extra stylesheet in `theme.css` and override only the variables you need. See [Theme folders](02-theme-folders.md) for the full lookup order.

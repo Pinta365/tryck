@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=optional");
 
 /* Colours from the Pinta design system, in light and dark. The selectors
    match the built-in theme's, so these win over it.
@@ -14,7 +14,7 @@
   --line: #dde3e0; --line-strong: #c8d0cc;
   --accent: #0b0d10; --link: #0b0d10; --label: #59636e;
   --current-fg: #0b0d10; --current-bg: #7cf29e;
-  --note: #0969da; --tip: #15803d; --info: #0f766e; --warning: #9a6700; --danger: #cf222e;
+  --note: #0969da; --tip: #166534; --info: #0f766e; --warning: #8a5c00; --danger: #cf222e;
   --warn-bg: #fff8c5; --warn-line: #d4a72c;
 }
 :root[data-theme="dark"] {
@@ -56,7 +56,7 @@ a:hover { text-decoration-thickness: 0.35em; }
 .brand { gap: 0; padding: 0.4rem 0.75rem; border-radius: 6px; background: #0b0d10; font-family: var(--font-mono); font-size: 1rem; font-weight: 700; }
 .site-header .brand { color: #e8ecef; }
 .brand-sigil { margin-right: 0.5rem; color: var(--mint); }
-.brand-suffix { margin-left: 0.4rem; color: #5c6672; font-weight: 400; }
+.brand-suffix { margin-left: 0.4rem; color: #8b98a5; font-weight: 400; }
 .brand-caret { display: inline-block; width: 0.5rem; height: 1.1em; margin-left: 0.4rem; background: var(--mint); animation: brand-blink 1s step-end infinite; }
 @keyframes brand-blink { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .brand-caret { animation: none; } }
@@ -98,7 +98,7 @@ th { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); }
 .search-open, .search-input { font-family: var(--font-mono); }
 .search-open { font-size: 0.85rem; border-color: var(--line-strong); }
 .search-dialog { border-color: var(--line-strong); }
-.search-results mark { background: color-mix(in srgb, var(--mint) 55%, transparent); }
+.search-results mark { background: var(--mint); color: var(--on-mint); }
 .search-heading { color: var(--label); font-family: var(--font-mono); font-size: 0.8rem; }
 .versions > summary { font-family: var(--font-mono); font-size: 0.85rem; border-color: var(--line-strong); }
 .versions ul { border-color: var(--line-strong); }
