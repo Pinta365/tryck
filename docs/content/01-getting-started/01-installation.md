@@ -47,6 +47,6 @@ This puts `tryck` in `$(go env GOPATH)/bin`, which is usually on your `PATH`.
 tryck version
 ```
 
-This prints `tryck <version>`, for example `tryck v0.4.1`. A custom binary built with [plugins](../05-extending/05-go-plugins/01-using-go-plugins.md) reports the tryck version it was built with.
+This prints `tryck <version>`, for example `tryck v0.4.2`. A custom binary built with [plugins](../05-extending/05-go-plugins/01-using-go-plugins.md) reports the tryck version it was built with.
 
 Next: [create a site](02-quick-start.md).
