@@ -1,0 +1,14 @@
+---
+title: Release notes
+weight: 9
+---
+
+What changed in each release of tryck, newest first. Subscribe to the [feed](/feed.xml) to hear about new releases, or watch the [releases page](https://github.com/Pinta365/tryck/releases) on GitHub.
+
+- [v0.4.0](v0.4.0.md): versioned docs and Atom/RSS feeds
+- [v0.3.2](v0.3.2.md): links in directive attributes are checked
+- [v0.3.1](v0.3.1.md): a search box in the built-in theme
+- [v0.3.0](v0.3.0.md): directive templates and JavaScript plugins
+- [v0.2.0](v0.2.0.md): Go plugins in custom binaries
+- [v0.1.1](v0.1.1.md): version reporting for go install
+- [v0.1.0](v0.1.0.md): the first release
