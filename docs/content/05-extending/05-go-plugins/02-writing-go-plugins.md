@@ -3,7 +3,7 @@ title: Writing Go plugins
 description: The plugin API, the build phases and how to test a plugin.
 ---
 
-A plugin is a Go type that implements `plugin.Plugin` and any of the phase interfaces in [`pkg/plugin`](https://github.com/Pinta365/tryck/tree/main/pkg/plugin). Plugins are compiled into the binary, so a custom site ships as one executable.
+A plugin is a Go type that implements `plugin.Plugin` and any of the phase interfaces in [`pkg/plugin`](https://pkg.go.dev/github.com/Pinta365/tryck/pkg/plugin). Its reference on pkg.go.dev has a runnable example for each kind of plugin: configuration, page data, extra output files and custom directives. Plugins are compiled into the binary, so a custom site ships as one executable.
 
 ## A custom binary
 

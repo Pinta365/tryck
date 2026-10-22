@@ -199,7 +199,10 @@ const dark = () => {
 };
 async function draw() {
   blocks.forEach((b) => { b.removeAttribute("data-processed"); b.textContent = b.dataset.source; });
-  mermaid.initialize({ startOnLoad: false, theme: dark() ? "dark" : "default" });
+  // A darker edge label background than mermaid's dark theme, so labels
+  // meet the 4.5:1 contrast minimum.
+  const themeVariables = dark() ? { edgeLabelBackground: "#333333" } : {};
+  mermaid.initialize({ startOnLoad: false, theme: dark() ? "dark" : "default", themeVariables });
   await mermaid.run({ nodes: blocks });
 }
 draw();
