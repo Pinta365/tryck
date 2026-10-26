@@ -41,6 +41,19 @@ External links (`https://...`, `mailto:...`) and same-page fragments (`#section`
 
 Files next to your pages are copied to the output and can be linked directly. `content/guide/diagram.png` is served at `/guide/diagram.png`, so `![Diagram](diagram.png)` in `content/guide/intro.md` works. Directories with an ordering prefix are renamed: a file in `content/01-guide/` is served under `/guide/`.
 
+## Images
+
+tryck sets three attributes on every Markdown image:
+
+```html
+<img src="/guide/diagram.png" alt="Diagram" width="1200" height="800" loading="lazy">
+```
+
+- `width` and `height` are read from the image file, so the browser reserves the image's space before it loads and the text below does not jump. This works for PNG, JPEG, GIF and WebP images in `content/` or `static/`; other images, such as SVG or external ones, get no size. The built-in theme scales images down to fit the page and keeps their aspect ratio.
+- `loading="lazy"` makes the browser load images further down the page only when the reader scrolls near them.
+
+Images are not resized or converted. Set `defaults.imageAttributes: false` to turn this off, for example in a theme whose stylesheet has no `img { height: auto; }`. Images written as HTML `<img>` tags are left unchanged.
+
 ## Link checking
 
 The `linkCheck` plugin checks every internal link after all pages and generated files are known.

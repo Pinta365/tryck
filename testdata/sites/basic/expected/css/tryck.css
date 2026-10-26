@@ -69,7 +69,7 @@ pre { padding: 1rem; overflow-x: auto; background: var(--bg-alt); border-radius:
 table { border-collapse: collapse; display: block; overflow-x: auto; }
 th, td { padding: 0.4rem 0.75rem; border: 1px solid var(--line); }
 th { text-align: left; }
-img { max-width: 100%; }
+img { max-width: 100%; height: auto; }
 .admonition { --adm: var(--note); margin: 1rem 0; padding: 0.5rem 1rem; border-left: 4px solid var(--adm); background: var(--bg-alt); border-radius: 0 6px 6px 0; }
 .admonition-tip { --adm: var(--tip); }
 .admonition-info { --adm: var(--info); }

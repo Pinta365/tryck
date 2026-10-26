@@ -2,7 +2,10 @@ package build
 
 import (
 	"net/url"
+	"os"
 	"path"
+	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/yuin/goldmark/ast"
@@ -42,6 +45,12 @@ type linkResolver struct {
 	assets  map[string]string // asset source path -> output path
 	urls    map[string]bool   // the version's page URLs
 	files   map[string]bool   // the version's asset output paths
+	// With images set, Markdown images get width, height and
+	// loading="lazy" from their file: an asset (srcs) or a file in a
+	// static directory, later directories first.
+	images *imageSizes
+	srcs   map[string]string // asset output path -> file on disk
+	static []string
 }
 
 func (r *linkResolver) resolve(sourcePath, dest string) (string, bool) {
@@ -144,8 +153,34 @@ func (r *linkResolver) rewrite(sourcePath string, refs []linkRef) {
 			l.Destination = []byte(dest)
 		case *ast.Image:
 			l.Destination = []byte(dest)
+			if r.images != nil {
+				size, ok := r.images.size(r.file(sourcePath, ref.dest))
+				setImageAttrs(l, size, ok)
+			}
 		case *markdown.GenericDirective:
 			l.SetAttributeString(ref.attr, []byte(dest))
 		}
 	}
+}
+
+// file returns the file on disk that a local destination points at, or
+// "" if it is not a known asset or static file.
+func (r *linkResolver) file(sourcePath, dest string) string {
+	u, err := url.Parse(dest)
+	if err != nil || u.Scheme != "" || u.Host != "" || u.Opaque != "" || u.Path == "" {
+		return ""
+	}
+	if !strings.HasPrefix(u.Path, "/") {
+		return r.srcs[r.assets[path.Join(path.Dir(sourcePath), u.Path)]]
+	}
+	if src := r.srcs[strings.TrimPrefix(versionPath(r.prefix, u.Path), "/")]; src != "" {
+		return src
+	}
+	for _, dir := range slices.Backward(r.static) {
+		f := filepath.Join(dir, filepath.FromSlash(path.Clean(u.Path)))
+		if fi, err := os.Stat(f); err == nil && fi.Mode().IsRegular() {
+			return f
+		}
+	}
+	return ""
 }

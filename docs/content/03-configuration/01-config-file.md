@@ -32,6 +32,7 @@ defaults:
   tocDepth: [2, 3]
   dateFormat: "2006-01-02"
   headingAnchors: true
+  imageAttributes: true
 
 versions:
   current: ""
@@ -120,6 +121,7 @@ The directory keys must not be empty, and `workers` must be `0` or positive.
 | `tocDepth` | `[min, max]` | `[2, 3]` | Heading levels included in the table of contents. Each is `1`–`6` and `min ≤ max`. |
 | `dateFormat` | string | `"2006-01-02"` | Go time layout used by `dateFormat` when no layout is passed. |
 | `headingAnchors` | bool | `true` | Add a `#` link to every heading below the page title, to link to that section. |
+| `imageAttributes` | bool | `true` | Set `width`, `height` and `loading="lazy"` on Markdown images. See [Images](../02-writing/03-links.md#images). |
 
 ## versions
 

@@ -72,6 +72,9 @@ type DefaultsConfig struct {
 	DateFormat string `yaml:"dateFormat"`
 	// HeadingAnchors adds a "#" link to every heading below h1.
 	HeadingAnchors bool `yaml:"headingAnchors"`
+	// ImageAttributes sets width, height and loading="lazy" on Markdown
+	// images.
+	ImageAttributes bool `yaml:"imageAttributes"`
 }
 
 // ThemeConfig selects an optional theme folder and sets the options of
@@ -155,11 +158,12 @@ func Defaults() *Config {
 			CleanOutput: true,
 		},
 		Defaults: DefaultsConfig{
-			Layout:         "doc",
-			TOC:            true,
-			TOCDepth:       [2]int{2, 3},
-			DateFormat:     "2006-01-02",
-			HeadingAnchors: true,
+			Layout:          "doc",
+			TOC:             true,
+			TOCDepth:        [2]int{2, 3},
+			DateFormat:      "2006-01-02",
+			HeadingAnchors:  true,
+			ImageAttributes: true,
 		},
 		Theme: ThemeConfig{ColorScheme: "auto"},
 		Plugins: map[string]map[string]any{

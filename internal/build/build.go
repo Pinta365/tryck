@@ -163,6 +163,7 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	}
 	var sources []source
 	links := map[string]*linkResolver{}
+	images := newImageSizes()
 	if cfg.Build.LastUpdated {
 		var dirs []string
 		for _, v := range b.versions {
@@ -180,12 +181,18 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 			b.dc.Errorf(b.rel(v.Dir), 0, 0, "content.read", "cannot read content: %v", err)
 		}
 		r := &linkResolver{baseURL: cfg.Site.BaseURL, prefix: v.Prefix, pages: map[string]string{}, assets: map[string]string{}, urls: map[string]bool{}, files: map[string]bool{}}
+		if cfg.Defaults.ImageAttributes {
+			r.images, r.srcs, r.static = images, map[string]string{}, cfg.StaticDirs()
+		}
 		links[v.Name] = r
 		for _, a := range src.Assets {
 			a.OutPath = strings.TrimPrefix(v.Prefix, "/") + a.OutPath
 			s.Assets = append(s.Assets, a)
 			r.assets[a.Rel] = a.OutPath
 			r.files[a.OutPath] = true
+			if r.srcs != nil {
+				r.srcs[a.OutPath] = a.Src
+			}
 		}
 		for _, rel := range src.Pages {
 			sources = append(sources, source{v, rel})
