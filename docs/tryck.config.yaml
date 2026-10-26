@@ -10,6 +10,8 @@ plugins:
   llmsTxt:
     full: true
     optional: [/releases/]
+  social:
+    image: /img/card.jpg
 
 theme:
   path: themes/pinta
