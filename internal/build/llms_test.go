@@ -144,3 +144,57 @@ func TestLLMsTxtFullWithoutPages(t *testing.T) {
 		t.Errorf("llms-full.txt:\n%q\nwant:\n%q", got, want)
 	}
 }
+
+func TestLLMsTxtVersions(t *testing.T) {
+	files := map[string]string{
+		"tryck.config.yaml": "site:\n  title: Demo\n  baseUrl: https://example.com/\nversions:\n  current: v2\n  older:\n    - name: v1\n" +
+			"plugins:\n  llmsTxt:\n    full: true\n    details: About v2.\n    exclude: [/internal/]\n",
+		"content/setup.md":          "# Setup\n\nSee [install](install.md).\n",
+		"content/install.md":        "# Install\n",
+		"versions/v1/setup.md":      "---\ndescription: The old way.\n---\n# Setup\n\nSee [install](install.md).\n",
+		"versions/v1/install.md":    "# Install\n",
+		"versions/v1/internal/x.md": "# Internal\n",
+	}
+	site := mustBuild(t, writeSite(t, files))
+	if site.HasErrors() {
+		t.Fatalf("build errors: %v", site.Diags)
+	}
+	if got := string(site.Outputs["llms.txt"]); strings.Contains(got, "/v1/") || !strings.Contains(got, "About v2.") {
+		t.Errorf("llms.txt is the current version's:\n%s", got)
+	}
+	want := `# Demo (v1)
+
+These are the docs for version v1. The current docs are described in [llms.txt](https://example.com/llms.txt).
+
+## Pages
+
+- [Install](https://example.com/v1/install/index.md)
+- [Setup](https://example.com/v1/setup/index.md): The old way.
+`
+	if got := string(site.Outputs["v1/llms.txt"]); got != want {
+		t.Errorf("v1/llms.txt:\n%s\nwant:\n%s", got, want)
+	}
+	if got := string(site.Outputs["v1/setup/index.md"]); !strings.Contains(got, "See [install](https://example.com/v1/install/index.md).") {
+		t.Errorf("v1 copies link v1 copies:\n%s", got)
+	}
+	if got := string(site.Outputs["v1/llms-full.txt"]); !strings.HasPrefix(got, "# Demo (v1)\n") || !strings.Contains(got, "Source: https://example.com/v1/setup/") {
+		t.Errorf("v1/llms-full.txt:\n%s", got)
+	}
+	if _, ok := site.Outputs["v1/internal/x/index.md"]; ok {
+		t.Error("exclude does not apply within v1")
+	}
+	if html := string(site.Outputs["v1/setup/index.html"]); !strings.Contains(html, `<link rel="describedby" href="/v1/llms.txt">`) {
+		t.Errorf("v1 pages link v1/llms.txt:\n%s", html)
+	}
+
+	files["tryck.config.yaml"] += "    versions: false\n"
+	off := mustBuild(t, writeSite(t, files))
+	for _, p := range []string{"v1/llms.txt", "v1/setup/index.md", "v1/llms-full.txt"} {
+		if _, ok := off.Outputs[p]; ok {
+			t.Errorf("versions: false writes %s", p)
+		}
+	}
+	if html := string(off.Outputs["v1/setup/index.html"]); strings.Contains(html, "describedby") {
+		t.Error("versions: false still links llms.txt from v1 pages")
+	}
+}

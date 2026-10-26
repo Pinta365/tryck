@@ -5,6 +5,7 @@ import (
 	"cmp"
 	"fmt"
 	"html/template"
+	"maps"
 	"net/url"
 	"regexp"
 	"slices"
@@ -28,7 +29,8 @@ import (
 //
 // The Markdown is the page source as written, with front matter removed,
 // the page title as its first line and every link and image made
-// absolute. Drafts, older versions and pages under Exclude are left out;
+// absolute. With Versions, each older version gets the same files under
+// its prefix ("/v1/llms.txt"). Drafts and pages under Exclude are left out;
 // pages under Optional are listed in an "Optional" section, the
 // convention for secondary links. Raw HTML is removed unless UnsafeHTML
 // is set.
@@ -38,14 +40,18 @@ type LLMsTxt struct {
 	Details  string   `yaml:"details"`
 	Optional []string `yaml:"optional"`
 	Exclude  []string `yaml:"exclude"`
+	// Versions gives each older version its own llms.txt, copies and
+	// llms-full.txt under its URL prefix ("/v1/llms.txt").
+	Versions bool `yaml:"versions"`
 	// UnsafeHTML keeps raw HTML, as build.unsafeHTML does for pages;
 	// otherwise it is removed, like HTML comments and scripts are from
 	// pages.
 	UnsafeHTML bool `yaml:"-"`
 
-	site    plugin.SiteInfo
-	mu      sync.Mutex
-	sources map[string]llmsSource // page URL -> source with link edits
+	site     plugin.SiteInfo
+	mu       sync.Mutex
+	sources  map[string]llmsSource // page URL -> source with link edits
+	versions map[string]bool       // versions with included pages
 }
 
 // llmsSource is a page body and the changes that make it standalone.
@@ -66,11 +72,12 @@ type llmsEdit struct {
 
 func (*LLMsTxt) Name() string { return "llmsTxt" }
 func (*LLMsTxt) ConfigKeys() []string {
-	return []string{"pages", "full", "details", "optional", "exclude"}
+	return []string{"pages", "full", "details", "optional", "exclude", "versions"}
 }
 
 func (l *LLMsTxt) Init(cfg map[string]any, site plugin.SiteInfo) error {
-	*l = LLMsTxt{Pages: true, UnsafeHTML: l.UnsafeHTML, site: site, sources: map[string]llmsSource{}}
+	*l = LLMsTxt{Pages: true, Versions: true, UnsafeHTML: l.UnsafeHTML, site: site,
+		sources: map[string]llmsSource{}, versions: map[string]bool{}}
 	if err := decode(cfg, l); err != nil {
 		return err
 	}
@@ -85,7 +92,7 @@ func (l *LLMsTxt) Init(cfg map[string]any, site plugin.SiteInfo) error {
 // OnPageParsed records where the page's links are and what they point
 // to. Links have their final URLs by now.
 func (l *LLMsTxt) OnPageParsed(p *plugin.Page) error {
-	if p.Front.Draft || p.Version != l.site.Version || l.excluded(p.URL) {
+	if p.Front.Draft || (p.Version != l.site.Version && !l.Versions) || l.excluded(p.Version, p.URL) {
 		return nil
 	}
 	src := llmsSource{body: p.Source}
@@ -128,6 +135,7 @@ func (l *LLMsTxt) OnPageParsed(p *plugin.Page) error {
 	slices.SortFunc(src.edits, func(a, b llmsEdit) int { return a.start - b.start })
 	l.mu.Lock()
 	l.sources[p.URL] = src
+	l.versions[p.Version] = true
 	l.mu.Unlock()
 	return nil
 }
@@ -138,14 +146,64 @@ func (l *LLMsTxt) has(pageURL string) bool {
 	return ok
 }
 
-func (l *LLMsTxt) excluded(u string) bool   { return hasPrefix(u, l.Exclude) }
-func (l *LLMsTxt) isOptional(u string) bool { return hasPrefix(u, l.Optional) }
+// prefix is a version's URL prefix: "/" for the current one, "/v1/" for
+// an older one.
+func (l *LLMsTxt) prefix(version string) string {
+	if version == l.site.Version {
+		return "/"
+	}
+	return "/" + version + "/"
+}
+
+// Exclude and Optional are site paths within a version: "/internal/"
+// also matches "/v1/internal/".
+func (l *LLMsTxt) excluded(version, u string) bool {
+	return hasPrefix("/"+strings.TrimPrefix(u, l.prefix(version)), l.Exclude)
+}
+
+func (l *LLMsTxt) isOptional(version, u string) bool {
+	return hasPrefix("/"+strings.TrimPrefix(u, l.prefix(version)), l.Optional)
+}
 
 func hasPrefix(u string, prefixes []string) bool {
 	return slices.ContainsFunc(prefixes, func(p string) bool { return strings.HasPrefix(u, p) })
 }
 
 func (l *LLMsTxt) OnBuildComplete(v plugin.SiteView, out plugin.Outputs) error {
+	versions := slices.Sorted(maps.Keys(l.versions))
+	// The current version first, then older ones by name.
+	slices.SortStableFunc(versions, func(a, b string) int {
+		return cmp.Compare(boolInt(a != l.site.Version), boolInt(b != l.site.Version))
+	})
+	for _, version := range versions {
+		nav := v.Nav()
+		if version != l.site.Version {
+			vn, ok := v.(interface{ VersionNav(string) *plugin.NavNode })
+			if !ok {
+				continue
+			}
+			nav = vn.VersionNav(version)
+		}
+		if nav == nil {
+			continue
+		}
+		if err := l.writeVersion(v, out, version, nav); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// writeVersion writes the llms.txt, Markdown copies and llms-full.txt of
+// one version, under its URL prefix.
+func (l *LLMsTxt) writeVersion(v plugin.SiteView, out plugin.Outputs, version string, nav *plugin.NavNode) error {
 	// Pages in navigation order, grouped by top-level section.
 	type group struct {
 		title string
@@ -159,7 +217,7 @@ func (l *LLMsTxt) OnBuildComplete(v plugin.SiteView, out plugin.Outputs) error {
 	add = func(g *group, n *plugin.NavNode) {
 		if p, ok := v.PageByURL(n.URL); ok && n.URL != "" && !seen[n.URL] && l.has(n.URL) {
 			seen[n.URL] = true
-			if l.isOptional(n.URL) {
+			if l.isOptional(version, n.URL) {
 				optional = append(optional, p)
 			} else {
 				g.pages = append(g.pages, p)
@@ -169,7 +227,6 @@ func (l *LLMsTxt) OnBuildComplete(v plugin.SiteView, out plugin.Outputs) error {
 			add(g, c)
 		}
 	}
-	nav := v.Nav()
 	add(&top, &plugin.NavNode{URL: nav.URL})
 	for _, n := range nav.Children {
 		if !n.Section {
@@ -189,13 +246,22 @@ func (l *LLMsTxt) OnBuildComplete(v plugin.SiteView, out plugin.Outputs) error {
 		groups = append(groups, group{title: "Optional", pages: optional})
 	}
 
+	prefix := l.prefix(version)
+	title := cmp.Or(l.site.Title, "Documentation")
+	details := strings.TrimSpace(l.Details)
+	if version != l.site.Version {
+		// The site's details describe the current version.
+		title += " (" + version + ")"
+		details = fmt.Sprintf("These are the docs for version %s. The current docs are described in [llms.txt](%s).",
+			version, render.AbsURL(l.site.BaseURL, "/llms.txt"))
+	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "# %s\n", cmp.Or(l.site.Title, "Documentation"))
+	fmt.Fprintf(&b, "# %s\n", title)
 	if d := oneLine(l.site.Description); d != "" {
 		fmt.Fprintf(&b, "\n> %s\n", d)
 	}
-	if d := strings.TrimSpace(l.Details); d != "" {
-		fmt.Fprintf(&b, "\n%s\n", d)
+	if details != "" {
+		fmt.Fprintf(&b, "\n%s\n", details)
 	}
 	for _, g := range groups {
 		fmt.Fprintf(&b, "\n## %s\n\n", g.title)
@@ -207,13 +273,14 @@ func (l *LLMsTxt) OnBuildComplete(v plugin.SiteView, out plugin.Outputs) error {
 			b.WriteByte('\n')
 		}
 	}
-	if err := out.Add("llms.txt", []byte(b.String())); err != nil {
+	dir := strings.TrimPrefix(prefix, "/")
+	if err := out.Add(dir+"llms.txt", []byte(b.String())); err != nil {
 		return err
 	}
 
 	var full strings.Builder
 	if l.Full {
-		fmt.Fprintf(&full, "# %s\n", cmp.Or(l.site.Title, "Documentation"))
+		fmt.Fprintf(&full, "# %s\n", title)
 		if d := oneLine(l.site.Description); d != "" {
 			fmt.Fprintf(&full, "\n> %s\n", d)
 		}
@@ -233,7 +300,7 @@ func (l *LLMsTxt) OnBuildComplete(v plugin.SiteView, out plugin.Outputs) error {
 		}
 	}
 	if l.Full {
-		return out.Add("llms-full.txt", []byte(full.String()))
+		return out.Add(dir+"llms-full.txt", []byte(full.String()))
 	}
 	return nil
 }
@@ -316,14 +383,9 @@ func (l *LLMsTxt) OnPageRendered(p *plugin.Page, _ plugin.SiteView) error {
 		fmt.Fprintf(&links, "<link rel=\"alternate\" type=\"text/markdown\" href=\"%s\">\n",
 			template.HTMLEscapeString(render.RelURL(l.site.BaseURL, "/"+mdPath(p.URL))))
 	}
-	fmt.Fprintf(&links, "<link rel=\"describedby\" href=\"%s\">\n", template.HTMLEscapeString(render.RelURL(l.site.BaseURL, "/llms.txt")))
-	// After the title, so the head-end partial stays last in <head>.
-	if i := bytes.Index(p.HTML, []byte("</title>")); i >= 0 {
-		at := i + len("</title>")
-		p.HTML = slices.Concat(p.HTML[:at], []byte("\n"+strings.TrimSuffix(links.String(), "\n")), p.HTML[at:])
-	} else {
-		p.HTML = bytes.Replace(p.HTML, []byte("</head>"), []byte(links.String()+"</head>"), 1)
-	}
+	fmt.Fprintf(&links, "<link rel=\"describedby\" href=\"%s\">\n",
+		template.HTMLEscapeString(render.RelURL(l.site.BaseURL, l.prefix(p.Version)+"llms.txt")))
+	p.HTML = addToHead(p.HTML, links.String())
 	return nil
 }
 

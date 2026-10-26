@@ -62,8 +62,13 @@ func (v *siteView) PageByURL(url string) (*plugin.PageInfo, bool) {
 	return p, ok
 }
 
-func (v *siteView) Nav() *plugin.NavNode    { return v.nav }
-func (v *siteView) Config() plugin.SiteInfo { return v.site }
+func (v *siteView) Nav() *plugin.NavNode { return v.nav }
+
+// VersionNav returns the navigation tree of a version by name. It is not
+// part of plugin.SiteView; built-in plugins that write a file per
+// version look for it.
+func (v *siteView) VersionNav(name string) *plugin.NavNode { return v.navs[name] }
+func (v *siteView) Config() plugin.SiteInfo                { return v.site }
 
 func (v *siteView) HasAnchor(url, id string) bool {
 	_, ok := v.anchors[url][id]

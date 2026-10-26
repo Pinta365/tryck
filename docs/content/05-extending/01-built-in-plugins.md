@@ -26,7 +26,7 @@ An unknown option in a plugin section is a `config.unknownKey` warning, and an u
 | `redirects` | — | on | Writes a redirect page per front matter alias. |
 | `mermaid` | `url` | jsDelivr mermaid 11 | Draws ` ```mermaid ` blocks. |
 | `feed` | `sections`, `limit`, `format`, `author` | `[/]`, `20`, `atom`, site title | Writes Atom or RSS feeds of dated pages. |
-| `llmsTxt` | `pages`, `full`, `details`, `optional`, `exclude` | `true`, `false`, `""`, `[]`, `[]` | Writes `/llms.txt` and Markdown copies of pages for AI tools. |
+| `llmsTxt` | `pages`, `full`, `details`, `optional`, `exclude`, `versions` | `true`, `false`, `""`, `[]`, `[]`, `true` | Writes `/llms.txt` and Markdown copies of pages for AI tools. |
 
 ## toc
 
@@ -111,6 +111,7 @@ Each page also links its Markdown copy and `llms.txt` in `<head>`, so an agent t
 | `details` | `""` | Markdown placed after the description in `llms.txt`: what a reader should know first, such as which version the docs describe. |
 | `optional` | `[]` | Site paths of sections listed under `## Optional` instead of their own section, for secondary pages such as release notes. A page belongs to one when its URL starts with it. |
 | `exclude` | `[]` | Site paths of sections left out of every file. Their pages get no `<head>` links. |
+| `versions` | `true` | Give each [older version](../02-writing/06-versioned-docs.md) its own `llms.txt`, copies and `llms-full.txt` under its URL, such as `/v1/llms.txt`. See [Versioned docs](#versioned-docs). |
 
 ```yaml
 plugins:
@@ -177,8 +178,22 @@ Source: https://tryck.pinta.land/deploying/
 
 `llms-full.txt` is not part of the llms.txt proposal, but many sites publish one and some tools look for it.
 
+### Versioned docs
+
+On a [versioned site](../02-writing/06-versioned-docs.md), `/llms.txt` covers the current version only, so an agent gets the docs most people need. Each older version gets its own files under its URL, the same as the current version's:
+
+| Current version | Older version `v1` |
+| :- | :- |
+| `/llms.txt` | `/v1/llms.txt` |
+| `/guide/setup/index.md` | `/v1/guide/setup/index.md` |
+| `/llms-full.txt` (with `full`) | `/v1/llms-full.txt` |
+
+An older version's `llms.txt` is titled with its version, such as `# tryck (v1)`, and in place of `details`, which describes the current version, it says which version it covers and links the current `llms.txt`. Its pages link it in `<head>`, so an agent that lands on a v1 page gets the v1 docs. Following llms.txt v2, a file covers the pages under its path and the most specific one applies, so `/v1/llms.txt` is the one for `/v1/` pages.
+
+`exclude` and `optional` apply within every version: `exclude: [/internal/]` also leaves out `/v1/internal/`. Set `versions: false` to write files for the current version only; older pages then get no `<head>` links.
+
 ### What is included
 
-Drafts, pages of [older versions](../02-writing/06-versioned-docs.md) and pages under `exclude` are left out of every file. Everything else that is in the navigation is listed. Links in `llms.txt` and the copies are absolute when `site.baseUrl` has a host, such as `https://example.com/docs/`; with a path-only `baseUrl` they start with the base path, which works when a tool fetches them from the same site.
+Drafts and pages under `exclude` are left out of every file. Everything else that is in a version's navigation is listed. Links in `llms.txt` and the copies are absolute when `site.baseUrl` has a host, such as `https://example.com/docs/`; with a path-only `baseUrl` they start with the base path, which works when a tool fetches them from the same site.
 
 The `<head>` links are added to pages whose layout has a `<head>`, as the built-in layouts do. Static hosts usually serve `.md` files as plain text or Markdown, so tools can read the copies directly. To let people find `llms.txt` too, link it from your site, for example in `theme.nav` or `theme.footer`.

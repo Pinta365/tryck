@@ -60,6 +60,7 @@ Link checking covers every version. A broken link in an old version is reported 
 - **The version picker** next to the search box lists every version. Each entry links to the same page in that version, matched by its file path, or to the version's home page when the page does not exist there. It works without JavaScript.
 - **A banner** on pages of older versions says which version they belong to and links to the same page in the current version.
 - **Search** in the site's search box covers the version the reader is in. Each version has its own index, `/v0.2/search-index.json` for an older one.
+- **AI tools** get an `llms.txt` per version: `/llms.txt` for the current one and `/v0.2/llms.txt` for an older one, each with Markdown copies of its pages. See [llmsTxt](../05-extending/01-built-in-plugins.md#versioned-docs).
 - **Search engines** only see the current version. Older versions are left out of `sitemap.xml`, and their pages carry `<meta name="robots" content="noindex">`, so search results lead to up-to-date docs.
 
 ## Templates and plugins
