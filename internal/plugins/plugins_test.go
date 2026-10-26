@@ -197,7 +197,7 @@ func TestLoadOrderingAndConfig(t *testing.T) {
 	for _, p := range set.Plugins() {
 		names = append(names, p.Name())
 	}
-	if got := strings.Join(names, ","); got != "aa,zz,toc,feed,mermaid,redirects,search,sitemap,syntaxHighlighting,late,linkCheck" {
+	if got := strings.Join(names, ","); got != "aa,zz,toc,feed,llmsTxt,mermaid,redirects,search,sitemap,syntaxHighlighting,late,linkCheck" {
 		t.Errorf("order = %s", got)
 	}
 	var msgs []string

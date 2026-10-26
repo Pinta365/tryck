@@ -29,6 +29,7 @@ func builtins(cfg *config.Config) []plugin.Plugin {
 		&Redirects{},
 		&Mermaid{},
 		&Feed{},
+		&LLMsTxt{UnsafeHTML: cfg.Build.UnsafeHTML},
 	}
 }
 

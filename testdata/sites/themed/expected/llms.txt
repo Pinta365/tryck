@@ -1,0 +1,6 @@
+# Themed
+
+## Pages
+
+- [Welcome](https://example.com/themed/index.md)
+- [Guide](https://example.com/themed/guide.md)

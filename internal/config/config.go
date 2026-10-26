@@ -189,6 +189,7 @@ func Defaults() *Config {
 			"search":             {"enabled": true},
 			"mermaid":            {"enabled": true},
 			"feed":               {"enabled": true},
+			"llmsTxt":            {"enabled": true},
 		},
 		Root: ".",
 	}

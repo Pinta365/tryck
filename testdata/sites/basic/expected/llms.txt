@@ -1,0 +1,13 @@
+# Basic Docs
+
+> Golden test fixture.
+
+## Pages
+
+- [Welcome to Basic](https://example.com/basic/index.md)
+
+## Guide
+
+- [Guide](https://example.com/basic/guide.md)
+- [Setup & install](https://example.com/basic/guide/setup.md): How to <install> it.
+- [Directives](https://example.com/basic/guide/directives.md)

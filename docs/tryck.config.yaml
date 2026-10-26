@@ -6,6 +6,11 @@ site:
 build:
   lastUpdated: true
 
+plugins:
+  llmsTxt:
+    full: true
+    optional: [/releases/]
+
 theme:
   path: themes/pinta
   nav:
