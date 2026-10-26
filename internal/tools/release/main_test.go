@@ -127,3 +127,39 @@ func TestPrepareRefuses(t *testing.T) {
 		t.Errorf("moved version: %v", err)
 	}
 }
+
+func TestPrepareFromUnreleased(t *testing.T) {
+	root := repo(t)
+	unreleased := filepath.Join(root, filepath.FromSlash(unreleasedPath))
+	entries := "- **Math.** Formulas render at build time.\n- **Fix.** Something broken works."
+	if err := os.WriteFile(unreleased, []byte(strings.Replace(unreleasedTemplate, unreleasedGuide, unreleasedGuide+"\n\n"+entries, 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC)
+	if _, err := prepare(root, "v0.11.0", "math", now); !errors.Is(err, errNotesGathered) {
+		t.Fatalf("first run: %v, want errNotesGathered", err)
+	}
+	notes := read(t, root, releasesDir+"/v0.11.0.md")
+	if !strings.HasSuffix(notes, "---\n\n"+entries+"\n") || strings.Contains(notes, placeholder) || strings.Contains(notes, "draft") {
+		t.Errorf("notes from unreleased.md:\n%s", notes)
+	}
+	if got := read(t, root, unreleasedPath); got != unreleasedTemplate {
+		t.Errorf("unreleased.md not emptied:\n%s", got)
+	}
+	// The description is still to be written.
+	if _, err := prepare(root, "v0.11.0", "math", now); err == nil || !strings.Contains(err.Error(), "description") {
+		t.Fatalf("second run without a description: %v", err)
+	}
+
+	// An empty unreleased.md gives the usual empty notes.
+	root = repo(t)
+	if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(unreleasedPath)), []byte(unreleasedTemplate), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := prepare(root, "v0.11.0", "math", now); !errors.Is(err, errNotesCreated) {
+		t.Fatalf("empty unreleased.md: %v, want errNotesCreated", err)
+	}
+	if !strings.Contains(read(t, root, releasesDir+"/v0.11.0.md"), placeholder) {
+		t.Error("empty unreleased.md: notes have no placeholder")
+	}
+}

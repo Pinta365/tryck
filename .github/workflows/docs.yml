@@ -1,10 +1,15 @@
 # Builds the docs site in docs/ with tryck and deploys it to GitHub Pages.
 # Pull requests build it in ci.yml.
+#
+# The site documents the latest release, so it deploys when a release is
+# tagged, not on every push to main. To publish a docs-only fix between
+# releases, run this workflow by hand on main (Actions > Docs > Run
+# workflow); that also publishes any unreleased changes documented there.
 name: Docs
 
 on:
   push:
-    branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:

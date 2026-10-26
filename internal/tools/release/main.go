@@ -4,8 +4,11 @@
 //
 //	go run ./internal/tools/release v0.9.0 "a short summary for the index"
 //
-// The first run creates docs/content/09-releases/v0.9.0.md for you to
-// write. The next run checks the notes, orders every release page by
+// Between releases, changes are noted in docs/content/09-releases/
+// unreleased.md, a draft page. The first run creates
+// docs/content/09-releases/v0.9.0.md from those notes (or empty, if there
+// are none) and empties unreleased.md, for you to edit and give a
+// description. The next run checks the notes, orders every release page by
 // version, adds the release to the index and points the docs and the
 // starter at the new version. Running it again changes nothing. It never
 // commits, tags or pushes; it prints the commands for that.
@@ -46,7 +49,11 @@ func main() {
 	}
 	version, summary := os.Args[1], os.Args[2]
 	changed, err := prepare(".", version, summary, time.Now())
-	if errors.Is(err, errNotesCreated) {
+	switch {
+	case errors.Is(err, errNotesGathered):
+		fmt.Printf("Created %s from %s, which is empty again. Edit the notes, write the description, then run this again.\n", notesPath(version), unreleasedPath)
+		return
+	case errors.Is(err, errNotesCreated):
 		fmt.Printf("Created %s. Write the notes and the description, then run this again.\n", notesPath(version))
 		return
 	}
@@ -73,7 +80,29 @@ Review the changes, then:
 `, version)
 }
 
-var errNotesCreated = errors.New("release notes created")
+var (
+	errNotesCreated  = errors.New("release notes created")
+	errNotesGathered = errors.New("release notes created from unreleased.md")
+)
+
+// unreleasedPath gathers the changes on main between releases. It is a
+// draft, so only tryck dev shows it.
+const unreleasedPath = releasesDir + "/unreleased.md"
+
+const unreleasedGuide = "<!-- Add a line for each change that lands on main, as in the release notes. The release tool moves them into the next release's notes. -->"
+
+const unreleasedTemplate = "---\ntitle: Unreleased\ndraft: true\ndescription: Changes on main since the last release.\n---\n\n" + unreleasedGuide + "\n"
+
+// unreleasedEntries returns the body of unreleased.md without its front
+// matter and guide comment, or "" if nothing was added.
+func unreleasedEntries(s string) string {
+	if strings.HasPrefix(s, "---\n") {
+		if i := strings.Index(s[4:], "\n---\n"); i >= 0 {
+			s = s[4+i+5:]
+		}
+	}
+	return strings.TrimSpace(strings.Replace(s, unreleasedGuide, "", 1))
+}
 
 func notesPath(version string) string {
 	return filepath.ToSlash(filepath.Join(releasesDir, version+".md"))
@@ -92,10 +121,26 @@ func prepare(root, version, summary string, now time.Time) ([]string, error) {
 	}
 	notes := filepath.Join(root, notesPath(version))
 	if _, err := os.Stat(notes); errors.Is(err, os.ErrNotExist) {
-		skeleton := fmt.Sprintf("---\ntitle: %s\ndate: %s\nlayout: post\nweight: 1\ndescription: \"\"\n---\n\n%s\n\nUpgrading: nothing to change.\n",
-			version, now.Format("2006-01-02"), placeholder)
+		// The notes start from what was gathered in unreleased.md, which
+		// is emptied for the next release.
+		text := placeholder + "\n\nUpgrading: nothing to change."
+		unreleased := filepath.Join(root, filepath.FromSlash(unreleasedPath))
+		gathered := false
+		if data, err := os.ReadFile(unreleased); err == nil {
+			if entries := unreleasedEntries(string(data)); entries != "" {
+				text, gathered = entries, true
+			}
+		}
+		skeleton := fmt.Sprintf("---\ntitle: %s\ndate: %s\nlayout: post\nweight: 1\ndescription: \"\"\n---\n\n%s\n",
+			version, now.Format("2006-01-02"), text)
 		if err := os.WriteFile(notes, []byte(skeleton), 0o644); err != nil {
 			return nil, err
+		}
+		if gathered {
+			if err := os.WriteFile(unreleased, []byte(unreleasedTemplate), 0o644); err != nil {
+				return nil, err
+			}
+			return nil, errNotesGathered
 		}
 		return nil, errNotesCreated
 	}
