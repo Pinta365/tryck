@@ -63,3 +63,19 @@ Open `http://127.0.0.1:8080/`. The build must be clean, with no warnings or erro
 ```sh
 go run ./cmd/tryck build --config docs/tryck.config.yaml
 ```
+
+## Making a release
+
+Releases are cut by the maintainer from `main`. Pushing a `v*` tag runs the release workflow, which tests and builds the binaries with GoReleaser and publishes them on the [releases page](https://github.com/Pinta365/tryck/releases). Before tagging, the release notes and the version the docs and starter download are updated with a small tool:
+
+```sh
+go run ./internal/tools/release v0.9.0 "a short summary for the release index"
+```
+
+The first run creates `docs/content/09-releases/v0.9.0.md` with today's date. Write the notes and the `description` in it, then run the same command again. It checks that the notes are written and that the version is newer than every release before it, then:
+
+- orders the release notes by version, newest first,
+- adds the release to the list in `docs/content/09-releases/_index.md` with the summary,
+- points the installation and deploying pages and the starter workflow (`examples/docs-starter/.github/workflows/pages.yml`) at the new version.
+
+It only edits files, and running it again changes nothing. Review the diff, then commit, push and tag; the tool prints the commands. The starter workflow downloads the tagged release, so push the tag right after the commit.
