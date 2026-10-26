@@ -140,6 +140,7 @@ Plugins are compiled in and hook into the build phases through the public API in
 | redirects | | A redirect page for each `aliases` entry |
 | feed | `plugins.feed` | Atom or RSS feeds of dated pages, `/feed.xml` by default |
 | llmsTxt | `plugins.llmsTxt` | `/llms.txt` and a Markdown copy of each page for AI tools; `/llms-full.txt` with `full: true` |
+| math | `plugins.math` | `$...$`, `$$...$$` and ` ```math ` formulas rendered to MathML at build time with KaTeX, built in |
 | mermaid | `plugins.mermaid` | ` ```mermaid ` blocks drawn as diagrams; the script loads from `url` (jsDelivr by default) only on pages that use it |
 
 ### Writing a Go plugin

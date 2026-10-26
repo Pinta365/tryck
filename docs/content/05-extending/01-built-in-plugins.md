@@ -3,7 +3,7 @@ title: Built-in plugins
 description: What each built-in plugin does and how to configure it.
 ---
 
-Ten plugins ship with tryck. They are all enabled by default; a plugin with no section in the config file is still active. Configure a plugin under its name in the `plugins` section, and turn it off with `enabled: false`.
+Eleven plugins ship with tryck. They are all enabled by default; a plugin with no section in the config file is still active. Configure a plugin under its name in the `plugins` section, and turn it off with `enabled: false`.
 
 ```yaml
 plugins:
@@ -25,6 +25,7 @@ An unknown option in a plugin section is a `config.unknownKey` warning, and an u
 | `search` | `maxTextLength` | `5000` | Adds the search box and writes `/search-index.json`. |
 | `redirects` | — | on | Writes a redirect page per front matter alias. |
 | `mermaid` | `url` | jsDelivr mermaid 11 | Draws ` ```mermaid ` blocks. |
+| `math` | `inline`, `macros` | `true`, `{}` | Renders `$...$`, `$$...$$` and ` ```math ` formulas to MathML. |
 | `feed` | `sections`, `limit`, `format`, `author` | `[/]`, `20`, `atom`, site title | Writes Atom or RSS feeds of dated pages. |
 | `llmsTxt` | `pages`, `full`, `details`, `optional`, `exclude`, `versions` | `true`, `false`, `""`, `[]`, `[]`, `true` | Writes `/llms.txt` and Markdown copies of pages for AI tools. |
 
@@ -65,6 +66,17 @@ Writes a small meta-refresh page for every `aliases` entry in a page's front mat
 ## mermaid
 
 Renders ` ```mermaid ` code blocks as diagrams and adds a module script to pages that contain one. The `url` option is the module to load; the default is mermaid 11 from jsDelivr. Point it at a file under `static/` to work offline. See [Code and diagrams](../02-writing/05-code-and-diagrams.md).
+
+## math
+
+Renders TeX formulas, written as `$...$`, `$$...$$` or a ` ```math ` block, to MathML at build time with [KaTeX](https://katex.org), so pages need no script or stylesheet for them. KaTeX is built into tryck.
+
+| Option | Default | Meaning |
+| :- | :- | :- |
+| `inline` | `true` | Treat `$...$` as math. With `false`, only `$$...$$` and ` ```math ` are, and a single `$` is always text. |
+| `macros` | `{}` | Commands of your own, by name, such as `'\RR': '\mathbb{R}'`. Every formula can use them. |
+
+A formula that cannot be parsed is a `math.error` warning and is shown as its source. With the plugin disabled, dollars are text and ` ```math ` blocks are code. See [Math](../02-writing/05-code-and-diagrams.md#math) for the syntax and the rules that keep prices from turning into formulas.
 
 ## feed
 

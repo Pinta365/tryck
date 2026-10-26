@@ -28,6 +28,7 @@ func builtins(cfg *config.Config) []plugin.Plugin {
 		&Search{},
 		&Redirects{},
 		&Mermaid{},
+		&Math{},
 		&Feed{},
 		&LLMsTxt{UnsafeHTML: cfg.Build.UnsafeHTML},
 	}

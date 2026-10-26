@@ -1,6 +1,6 @@
 ---
-title: Code and diagrams
-description: Syntax highlighting, mermaid diagrams and heading IDs.
+title: Code, math and diagrams
+description: Syntax highlighting, math formulas, mermaid diagrams and heading IDs.
 ---
 
 ## Syntax highlighting
@@ -68,6 +68,61 @@ plugins:
 ```
 
 To run offline, save the mermaid module under `static/` and point `url` at that site path, for example `/js/mermaid.esm.min.mjs`. An empty `url` is a `plugin.config` error. The diagram is redrawn when the page switches between light and dark.
+
+## Math
+
+Write formulas in TeX, the way GitHub and most Markdown tools accept them. tryck renders them at build time with [KaTeX](https://katex.org) to MathML, which browsers display natively, so pages need no script, stylesheet or font for math.
+
+The area of a circle is $A = \pi r^2$, and
+
+$$
+\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}
+$$
+
+is written as:
+
+```markdown
+The area of a circle is $A = \pi r^2$, and
+
+$$
+\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}
+$$
+```
+
+There are three forms:
+
+| Syntax | Shows |
+| :- | :- |
+| `$...$` | A formula within the text. |
+| `$$...$$` | A displayed formula, on a line of its own. On lines of its own (as above), or on one line, it is a block; within a paragraph it is displayed where it stands. |
+| ` ```math ` block | A displayed formula, as on GitHub. |
+
+A single `$` is only math when it looks like math, so prices and shell variables in text stay as they are:
+
+- the opening `$` must be followed by a non-space character, and the closing `$` preceded by one and not followed by a digit, so `$5 and $10` is text,
+- a formula ends at a code span, so `` costs $5 with `$HOME` set `` is text,
+- `\$` is always a dollar sign.
+
+Formulas in code spans and code blocks are never rendered. A formula may span lines.
+
+A formula KaTeX cannot parse is a `math.error` warning with its line, and the page shows its source as code, with KaTeX's message as a tooltip:
+
+```
+content/guide/stats.md:12: warning[math.error]: Expected '}', got 'EOF' at end of input: \frac{1}{2
+```
+
+The `math` plugin has two options:
+
+```yaml
+plugins:
+  math:
+    inline: false        # only $$...$$ and ```math; a single $ is always text
+    macros:              # your own commands, used in every formula
+      '\RR': '\mathbb{R}'
+      '\norm': '\left\lVert #1 \right\rVert'
+```
+
+Write macro names and definitions in single quotes, where a backslash needs no escaping. Every command [KaTeX supports](https://katex.org/docs/supported) works. Formulas render in every current browser; a displayed formula wider than the page scrolls on its own.
 
 ## Copying code
 
