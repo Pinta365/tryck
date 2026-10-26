@@ -5,6 +5,7 @@ weight: 9
 
 What changed in each release of tryck, newest first. Subscribe to the [feed](/feed.xml) to hear about new releases, or watch the [releases page](https://github.com/Pinta365/tryck/releases) on GitHub.
 
+- [v0.10.0](v0.10.0.md): llms.txt per docs version, and feed links before head-end
 - [v0.9.0](v0.9.0.md): llms.txt v2: page copies at index.md and link relations
 - [v0.8.1](v0.8.1.md): dev server reloads on Windows
 - [v0.8.0](v0.8.0.md): llms.txt and Markdown copies of pages
