@@ -76,6 +76,10 @@ a:hover { text-decoration-thickness: 0.35em; }
 .sidebar a[aria-current="page"] { margin-left: -0.4rem; padding: 0.1rem 0.4rem; border-radius: 4px; background: var(--current-bg); color: var(--current-fg); }
 .pager a:hover { text-decoration: underline; text-decoration-color: var(--mint); }
 
+/* Footer: quiet links that light up on hover */
+.site-footer a { color: inherit; text-decoration-color: var(--line-strong); text-decoration-thickness: 1px; }
+.site-footer a:hover { color: var(--fg); text-decoration-color: var(--mint); text-decoration-thickness: 2px; }
+
 /* Code: terminal panels */
 pre { background: var(--bg-code); border: 1px solid var(--line); border-radius: 8px; }
 /* Repeated class: outranks the highlighting theme's :root[data-theme] .chroma background. */
