@@ -8,6 +8,6 @@
 
 ## Guide
 
-- [Guide](https://example.com/basic/guide.md)
-- [Setup & install](https://example.com/basic/guide/setup.md): How to <install> it.
-- [Directives](https://example.com/basic/guide/directives.md)
+- [Guide](https://example.com/basic/guide/index.md)
+- [Setup & install](https://example.com/basic/guide/setup/index.md): How to <install> it.
+- [Directives](https://example.com/basic/guide/directives/index.md)

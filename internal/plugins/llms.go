@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cmp"
 	"fmt"
+	"html/template"
 	"net/url"
 	"regexp"
 	"slices"
@@ -17,18 +18,20 @@ import (
 	"github.com/Pinta365/tryck/pkg/plugin"
 )
 
-// LLMsTxt writes /llms.txt (https://llmstxt.org): the site's title and
-// description, then a list of its pages with their descriptions, one
+// LLMsTxt writes /llms.txt (https://llmstxt.org, v2): the site's title
+// and description, then a list of its pages with their descriptions, one
 // section per top-level folder of the navigation. With Pages, every page
-// is also written as Markdown next to its URL ("/guide/setup/" ->
-// "/guide/setup.md"), and llms.txt links those. With Full, llms-full.txt
-// holds every page in one file.
+// is also written as Markdown at its URL ("/guide/setup/" ->
+// "/guide/setup/index.md"), llms.txt links those, and each page links
+// its copy and llms.txt in <head>. With Full, llms-full.txt holds every
+// page in one file.
 //
 // The Markdown is the page source as written, with front matter removed,
 // the page title as its first line and every link and image made
 // absolute. Drafts, older versions and pages under Exclude are left out;
-// pages under Optional are listed in an "Optional" section, which tools
-// may skip. Raw HTML is removed unless UnsafeHTML is set.
+// pages under Optional are listed in an "Optional" section, the
+// convention for secondary links. Raw HTML is removed unless UnsafeHTML
+// is set.
 type LLMsTxt struct {
 	Pages    bool     `yaml:"pages"`
 	Full     bool     `yaml:"full"`
@@ -290,10 +293,38 @@ func (l *LLMsTxt) pageLink(pageURL string) string {
 	return render.AbsURL(l.site.BaseURL, pageURL)
 }
 
-// mdPath is the output path of a page's Markdown copy:
-// "/guide/setup/" -> "guide/setup.md", "/" -> "index.md".
+// mdPath is the output path of a page's Markdown copy, at the page's
+// URL as llms.txt v2 asks: "index.md" appended to a URL that ends in a
+// directory ("/guide/setup/" -> "guide/setup/index.md", "/" ->
+// "index.md"), ".md" to any other.
 func mdPath(pageURL string) string {
-	return cmp.Or(strings.Trim(pageURL, "/"), "index") + ".md"
+	p := strings.TrimPrefix(pageURL, "/")
+	if p == "" || strings.HasSuffix(p, "/") {
+		return p + "index.md"
+	}
+	return p + ".md"
+}
+
+// OnPageRendered links the page's Markdown copy and llms.txt in <head>,
+// so agents find them from the page (llms.txt v2).
+func (l *LLMsTxt) OnPageRendered(p *plugin.Page, _ plugin.SiteView) error {
+	if !l.has(p.URL) {
+		return nil
+	}
+	var links strings.Builder
+	if l.Pages {
+		fmt.Fprintf(&links, "<link rel=\"alternate\" type=\"text/markdown\" href=\"%s\">\n",
+			template.HTMLEscapeString(render.RelURL(l.site.BaseURL, "/"+mdPath(p.URL))))
+	}
+	fmt.Fprintf(&links, "<link rel=\"describedby\" href=\"%s\">\n", template.HTMLEscapeString(render.RelURL(l.site.BaseURL, "/llms.txt")))
+	// After the title, so the head-end partial stays last in <head>.
+	if i := bytes.Index(p.HTML, []byte("</title>")); i >= 0 {
+		at := i + len("</title>")
+		p.HTML = slices.Concat(p.HTML[:at], []byte("\n"+strings.TrimSuffix(links.String(), "\n")), p.HTML[at:])
+	} else {
+		p.HTML = bytes.Replace(p.HTML, []byte("</head>"), []byte(links.String()+"</head>"), 1)
+	}
+	return nil
 }
 
 // linkEdit finds the destination of an inline, reference or shortcut

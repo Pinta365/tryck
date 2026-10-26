@@ -87,29 +87,36 @@ Each entry has the page's title, its absolute URL, its date and a summary: the f
 
 ## llmsTxt
 
-Writes [`/llms.txt`](https://llmstxt.org), a Markdown index of the site for language models and AI coding tools, and a Markdown copy of every page. When an assistant or agent reads documentation, Markdown carries the content without the navigation, scripts and markup around it, so it fits more of the docs into the model's context.
+Writes [`/llms.txt`](https://llmstxt.org), a Markdown index of the site for language models and AI coding agents, and a Markdown copy of every page. An agent that reads your documentation, for example to get an API call right, gets the content without the navigation, scripts and markup around it, so more of the docs fit in the model's context. tryck follows version 2 of the llms.txt proposal.
 
-The plugin writes three kinds of files:
+The plugin writes these files:
 
 | File | Default | Holds |
 | :- | :- | :- |
 | `/llms.txt` | on | The site's title and description, then a link to every page with its description, grouped by section. |
-| `/<page>.md` | on (`pages`) | Each page as Markdown, next to its URL: `/guide/setup/` gets `/guide/setup.md`, the home page `/index.md`. |
+| `<page>/index.md` | on (`pages`) | Each page as Markdown, at the page's own URL: `/guide/setup/` gets `/guide/setup/index.md`, the home page `/index.md`. |
 | `/llms-full.txt` | off (`full`) | Every page in one file, so a tool can load all the docs at once. It can be large, so it is off by default. |
+
+Each page also links its Markdown copy and `llms.txt` in `<head>`, so an agent that lands on a page finds both:
+
+```html
+<link rel="alternate" type="text/markdown" href="/guide/setup/index.md">
+<link rel="describedby" href="/llms.txt">
+```
 
 | Option | Default | Meaning |
 | :- | :- | :- |
-| `pages` | `true` | Write a Markdown copy of each page. `llms.txt` and links between pages then point at the copies; with `false` they point at the HTML pages. |
+| `pages` | `true` | Write a Markdown copy of each page and link it from the page. `llms.txt` and links between pages then point at the copies; with `false` they point at the HTML pages, and pages link only `llms.txt`. |
 | `full` | `false` | Write `/llms-full.txt`. |
 | `details` | `""` | Markdown placed after the description in `llms.txt`: what a reader should know first, such as which version the docs describe. |
-| `optional` | `[]` | Site paths of sections listed under `## Optional` instead of their own section. A page belongs to one when its URL starts with it. Tools may skip optional pages when their context is short. |
-| `exclude` | `[]` | Site paths of sections left out of every file. |
+| `optional` | `[]` | Site paths of sections listed under `## Optional` instead of their own section, for secondary pages such as release notes. A page belongs to one when its URL starts with it. |
+| `exclude` | `[]` | Site paths of sections left out of every file. Their pages get no `<head>` links. |
 
 ```yaml
 plugins:
   llmsTxt:
     full: true
-    details: "These docs describe tryck v0.8. Run `tryck help` for the commands."
+    details: "These docs describe tryck v0.9. Run `tryck help` for the commands."
     optional: [/releases/]
     exclude: [/internal/]
 ```
@@ -126,23 +133,25 @@ The file follows the [llms.txt format](https://llmstxt.org): the site title as `
 ## Pages
 
 - [tryck](https://tryck.pinta.land/index.md): A single-binary static site generator for technical documentation.
-- [Deploying](https://tryck.pinta.land/deploying.md): Publish a tryck site to GitHub Pages, Cloudflare Pages or any static host.
+- [Deploying](https://tryck.pinta.land/deploying/index.md): Publish a tryck site to GitHub Pages, Cloudflare Pages or any static host.
 
 ## Getting started
 
-- [Getting started](https://tryck.pinta.land/getting-started.md)
-- [Installation](https://tryck.pinta.land/getting-started/installation.md): Download a release binary or install tryck with go install.
+- [Getting started](https://tryck.pinta.land/getting-started/index.md)
+- [Installation](https://tryck.pinta.land/getting-started/installation/index.md): Download a release binary or install tryck with go install.
 
 ## Optional
 
-- [Release notes](https://tryck.pinta.land/releases.md)
+- [Release notes](https://tryck.pinta.land/releases/index.md)
 ```
 
-Pages with a `description` are easier for a tool to choose from, so it is worth giving every page one.
+Agents read or search `llms.txt` to decide which pages to fetch, so a page with a good `description` is easier to find. It is worth giving every page one. The `Optional` section is a convention for links an agent can do without; it is not treated differently from the others.
+
+`llms.txt` describes the pages under its own path. A site deployed at a subpath, such as `https://example.com/docs/`, gets `/docs/llms.txt`, which covers exactly that site.
 
 ### The Markdown copies
 
-Each copy is the page's source as you wrote it, changed only where it would not work on its own:
+A copy is at the page's URL with `index.md` added, the form llms.txt v2 gives for URLs that end in `/`, so an agent can work out where it is from the page URL alone. Each copy is the page's source as you wrote it, changed only where it would not work on its own:
 
 - It starts with the page title as `#` and the `description` as a quote. Front matter is removed, and so is the page's own `#` heading if the body starts with one, so the title is not repeated.
 - Every link and image becomes an absolute URL, since the copy is not where the source file was. A link to another page points at that page's copy (or at the page, with `pages: false`), and a link within the page points at the HTML page with its `#fragment`. External links are left as they are.
@@ -166,8 +175,10 @@ Source: https://tryck.pinta.land/deploying/
 ...
 ```
 
+`llms-full.txt` is not part of the llms.txt proposal, but many sites publish one and some tools look for it.
+
 ### What is included
 
 Drafts, pages of [older versions](../02-writing/06-versioned-docs.md) and pages under `exclude` are left out of every file. Everything else that is in the navigation is listed. Links in `llms.txt` and the copies are absolute when `site.baseUrl` has a host, such as `https://example.com/docs/`; with a path-only `baseUrl` they start with the base path, which works when a tool fetches them from the same site.
 
-Static hosts usually serve `.md` files as plain text or Markdown, so tools can read the copies directly. To let people find `llms.txt`, link it from your site, for example in `theme.nav`.
+The `<head>` links are added to pages whose layout has a `<head>`, as the built-in layouts do. Static hosts usually serve `.md` files as plain text or Markdown, so tools can read the copies directly. To let people find `llms.txt` too, link it from your site, for example in `theme.nav` or `theme.footer`.

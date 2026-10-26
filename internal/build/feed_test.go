@@ -78,7 +78,7 @@ func TestFeedSectionsRSSAndLimit(t *testing.T) {
 
 func TestFeedNothingToDo(t *testing.T) {
 	site := mustBuild(t, writeSite(t, map[string]string{"content/a.md": "# A\n"}))
-	if _, ok := site.Outputs["feed.xml"]; ok || strings.Contains(string(site.Outputs["a/index.html"]), "alternate") {
+	if _, ok := site.Outputs["feed.xml"]; ok || strings.Contains(string(site.Outputs["a/index.html"]), "application/atom+xml") {
 		t.Error("a site without dated pages gets no feed and no feed link")
 	}
 	if len(site.Diags) != 0 {

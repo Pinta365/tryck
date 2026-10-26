@@ -37,21 +37,21 @@ Read the guide first.
 
 ## Guide
 
-- [Guide](https://example.com/docs/guide.md)
-- [Install](https://example.com/docs/guide/install.md): Install it.
-- [Setup \[beta\]](https://example.com/docs/guide/setup.md): Set it up.
+- [Guide](https://example.com/docs/guide/index.md)
+- [Install](https://example.com/docs/guide/install/index.md): Install it.
+- [Setup \[beta\]](https://example.com/docs/guide/setup/index.md): Set it up.
 
 ## Optional
 
-- [Notes](https://example.com/docs/notes.md)
-- [One](https://example.com/docs/notes/one.md)
+- [Notes](https://example.com/docs/notes/index.md)
+- [One](https://example.com/docs/notes/one/index.md)
 `
 	if llms != want {
 		t.Errorf("llms.txt:\n%s\nwant:\n%s", llms, want)
 	}
 
-	setup := string(site.Outputs["guide/setup.md"])
-	wantSetup := "# Setup [beta]\n\n> Set it up.\n\n" + `Read [install](https://example.com/docs/guide/install.md) first, then [the API](https://example.org/api "API docs").
+	setup := string(site.Outputs["guide/setup/index.md"])
+	wantSetup := "# Setup [beta]\n\n> Set it up.\n\n" + `Read [install](https://example.com/docs/guide/install/index.md) first, then [the API](https://example.org/api "API docs").
 
 ![Shot](https://example.com/docs/guide/shot.png)
 
@@ -59,7 +59,7 @@ Jump to [usage](https://example.com/docs/guide/setup/#usage) or the [home page][
 
 ` + "```markdown\n[kept](relative.md)\n```" + `
 
-:::card{href="https://example.com/docs/guide/install.md" title=x}
+:::card{href="https://example.com/docs/guide/install/index.md" title=x}
 Card.
 :::
 
@@ -72,18 +72,28 @@ Done.
 [notes]: ../notes/one.md
 `
 	wantSetup = strings.Replace(wantSetup, "[home page][home]", `[home page](https://example.com/docs/index.md "Home")`, 1)
-	wantSetup = strings.Replace(wantSetup, "[Guide][]", "[Guide](https://example.com/docs/guide.md)", 1)
-	wantSetup = strings.Replace(wantSetup, "[notes].", "[notes](https://example.com/docs/notes/one.md).", 1)
+	wantSetup = strings.Replace(wantSetup, "[Guide][]", "[Guide](https://example.com/docs/guide/index.md)", 1)
+	wantSetup = strings.Replace(wantSetup, "[notes].", "[notes](https://example.com/docs/notes/one/index.md).", 1)
 	if setup != wantSetup {
-		t.Errorf("guide/setup.md:\n%s\nwant:\n%s", setup, wantSetup)
+		t.Errorf("guide/setup/index.md:\n%s\nwant:\n%s", setup, wantSetup)
 	}
-	if got := string(site.Outputs["guide/install.md"]); got != "# Install\n\n> Install it.\n\nBody.\n" {
+	if got := string(site.Outputs["guide/install/index.md"]); got != "# Install\n\n> Install it.\n\nBody.\n" {
 		t.Errorf("setext title not replaced:\n%q", got)
 	}
-	for _, p := range []string{"guide/draft.md", "internal/a.md", "internal.md", "llms-full.txt"} {
+	for _, p := range []string{"guide/draft/index.md", "internal/a/index.md", "internal/index.md", "llms-full.txt"} {
 		if _, ok := site.Outputs[p]; ok {
 			t.Errorf("%s is written", p)
 		}
+	}
+
+	// Pages link their copy and llms.txt in <head> (llms.txt v2), after
+	// the title so the head-end partial stays last.
+	links := "</title>\n<link rel=\"alternate\" type=\"text/markdown\" href=\"/docs/guide/setup/index.md\">\n<link rel=\"describedby\" href=\"/docs/llms.txt\">\n"
+	if html := string(site.Outputs["guide/setup/index.html"]); !strings.Contains(html, links) {
+		t.Errorf("guide/setup/index.html has no llms links in <head>:\n%s", html)
+	}
+	if html := string(site.Outputs["internal/a/index.html"]); strings.Contains(html, "describedby") {
+		t.Error("an excluded page links llms.txt")
 	}
 }
 
@@ -123,8 +133,11 @@ func TestLLMsTxtFullWithoutPages(t *testing.T) {
 	if got := string(site.Outputs["llms.txt"]); !strings.Contains(got, "- [A](https://example.com/a/)\n- [B](https://example.com/b/)\n") {
 		t.Errorf("llms.txt without pages links the pages:\n%s", got)
 	}
-	if _, ok := site.Outputs["a.md"]; ok {
-		t.Error("a.md is written without pages")
+	if _, ok := site.Outputs["a/index.md"]; ok {
+		t.Error("a/index.md is written without pages")
+	}
+	if html := string(site.Outputs["a/index.html"]); strings.Contains(html, "text/markdown") || !strings.Contains(html, `<link rel="describedby" href="/llms.txt">`) {
+		t.Errorf("without pages, a page links only llms.txt:\n%s", html)
 	}
 	want := "# Demo\n\n---\n\nSource: https://example.com/a/\n\n# A\n\nSee [B](https://example.com/b/).\n\n---\n\nSource: https://example.com/b/\n\n# B\n\nBee.\n"
 	if got := string(site.Outputs["llms-full.txt"]); got != want {
