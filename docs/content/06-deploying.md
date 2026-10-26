@@ -19,7 +19,7 @@ The workflow downloads `tryck_linux_amd64.tar.gz` for a pinned `TRYCK_VERSION`, 
 
 ```yaml
 env:
-  TRYCK_VERSION: v0.8.0
+  TRYCK_VERSION: v0.8.1
 ```
 
 ```sh

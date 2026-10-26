@@ -5,6 +5,7 @@ weight: 9
 
 What changed in each release of tryck, newest first. Subscribe to the [feed](/feed.xml) to hear about new releases, or watch the [releases page](https://github.com/Pinta365/tryck/releases) on GitHub.
 
+- [v0.8.1](v0.8.1.md): dev server reloads on Windows
 - [v0.8.0](v0.8.0.md): llms.txt and Markdown copies of pages
 - [v0.7.0](v0.7.0.md): resized images in a srcset
 - [v0.6.0](v0.6.0.md): image sizes and lazy loading
