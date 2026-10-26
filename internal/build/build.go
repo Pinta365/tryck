@@ -63,6 +63,9 @@ type Options struct {
 	Logger  *slog.Logger    // debug logs with per-stage timings; nil = silent
 	Plugins []plugin.Plugin // compiled-in plugins in addition to the built-ins
 	Cache   *Cache          // parsed pages reused between builds; nil = none
+	// ImageCache is the directory that keeps resized images between
+	// builds; "" keeps none.
+	ImageCache string
 }
 
 type builder struct {
@@ -163,7 +166,7 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	}
 	var sources []source
 	links := map[string]*linkResolver{}
-	images := newImageSizes()
+	images := newImages(cfg.Images, opts.ImageCache, b.rel)
 	if cfg.Build.LastUpdated {
 		var dirs []string
 		for _, v := range b.versions {
@@ -181,8 +184,9 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 			b.dc.Errorf(b.rel(v.Dir), 0, 0, "content.read", "cannot read content: %v", err)
 		}
 		r := &linkResolver{baseURL: cfg.Site.BaseURL, prefix: v.Prefix, pages: map[string]string{}, assets: map[string]string{}, urls: map[string]bool{}, files: map[string]bool{}}
-		if cfg.Defaults.ImageAttributes {
+		if cfg.Defaults.ImageAttributes || cfg.Images.Resize {
 			r.images, r.srcs, r.static = images, map[string]string{}, cfg.StaticDirs()
+			r.attrs, r.resize = cfg.Defaults.ImageAttributes, cfg.Images.Resize
 		}
 		links[v.Name] = r
 		for _, a := range src.Assets {
@@ -223,7 +227,9 @@ func Build(ctx context.Context, cfg *config.Config, opts Options) (*Site, error)
 	if err != nil {
 		return nil, err
 	}
-	stage("parse", "workers", workers)
+	maps.Copy(s.Outputs, images.outputs)
+	b.dc.Add(images.diags...)
+	stage("parse", "workers", workers, "resized", len(images.outputs))
 
 	// [3] Index, sequential. Pages, ByURL, Nav, Anchors and the plugin
 	// view are read-only from here on.

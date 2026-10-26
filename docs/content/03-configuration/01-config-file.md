@@ -34,6 +34,12 @@ defaults:
   headingAnchors: true
   imageAttributes: true
 
+images:
+  resize: false
+  widths: [480, 800, 1600]
+  quality: 85
+  sizes: "(min-width: 48rem) 46rem, calc(100vw - 2rem)"
+
 versions:
   current: ""
   older: []
@@ -122,6 +128,17 @@ The directory keys must not be empty, and `workers` must be `0` or positive.
 | `dateFormat` | string | `"2006-01-02"` | Go time layout used by `dateFormat` when no layout is passed. |
 | `headingAnchors` | bool | `true` | Add a `#` link to every heading below the page title, to link to that section. |
 | `imageAttributes` | bool | `true` | Set `width`, `height` and `loading="lazy"` on Markdown images. See [Images](../02-writing/03-links.md#images). |
+
+## images
+
+Resized copies of Markdown images. See [Resized copies](../02-writing/03-links.md#resized-copies).
+
+| Key | Type | Default | Meaning |
+| :- | :- | :- | :- |
+| `resize` | bool | `false` | Write smaller copies of PNG and JPEG images and list them in a `srcset`. |
+| `widths` | list | `[480, 800, 1600]` | Widths of the copies, in pixels. Each is `1`–`10000`; at least one is needed. |
+| `quality` | int | `85` | JPEG quality of the copies, `1`–`100`. |
+| `sizes` | string | `"(min-width: 48rem) 46rem, calc(100vw - 2rem)"` | The `sizes` attribute: how wide images are shown. The default matches the built-in theme. |
 
 ## versions
 

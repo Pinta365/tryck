@@ -48,6 +48,20 @@ tryck build
 
 A host that serves from the site root needs only `baseUrl: "/"`. A host that serves from a subpath needs the full subpath, for example `baseUrl: "/docs/"` or `https://example.com/docs/`.
 
+## Resized images
+
+With `images.resize: true`, tryck keeps resized copies in its cache directory, `~/.cache/tryck/images` on Linux. A fresh CI runner starts with an empty cache and resizes every image again. On GitHub Actions, keep the cache between runs with `actions/cache` before the build step:
+
+```yaml
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/tryck/images
+          key: tryck-images-${{ github.run_id }}
+          restore-keys: tryck-images-
+```
+
+Copies are found by the content of the original image, so a stale cache is never used for a changed image.
+
 ## Last-updated dates
 
 With `build.lastUpdated: true`, tryck reads each page's last commit date from git. A shallow clone makes every page look changed by the latest commit, so fetch the full history in CI:

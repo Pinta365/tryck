@@ -198,7 +198,7 @@ func runBuild(args []string, stdout, stderr io.Writer, plugins []plugin.Plugin) 
 	log.Debug("config loaded", "path", cfg.Path, "root", cfg.Root, "baseUrl", cfg.Site.BaseURL, "workers", cfg.WorkerCount())
 
 	start := time.Now()
-	site, err := build.Build(context.Background(), cfg, build.Options{Logger: log, Plugins: plugins})
+	site, err := build.Build(context.Background(), cfg, build.Options{Logger: log, Plugins: plugins, ImageCache: build.ImageCacheDir()})
 	if err != nil {
 		fmt.Fprintf(stderr, "tryck build: %v\n", err)
 		return exitBuild

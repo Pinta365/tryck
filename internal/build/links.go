@@ -1,6 +1,8 @@
 package build
 
 import (
+	"fmt"
+	"image"
 	"net/url"
 	"os"
 	"path"
@@ -45,10 +47,13 @@ type linkResolver struct {
 	assets  map[string]string // asset source path -> output path
 	urls    map[string]bool   // the version's page URLs
 	files   map[string]bool   // the version's asset output paths
-	// With images set, Markdown images get width, height and
-	// loading="lazy" from their file: an asset (srcs) or a file in a
-	// static directory, later directories first.
-	images *imageSizes
+	// With images set, Markdown images are looked up as files: an asset
+	// (srcs) or a file in a static directory, later directories first.
+	// With attrs they get width, height and loading="lazy" from it, and
+	// with resize a srcset of smaller copies.
+	images *images
+	attrs  bool
+	resize bool
 	srcs   map[string]string // asset output path -> file on disk
 	static []string
 }
@@ -154,8 +159,7 @@ func (r *linkResolver) rewrite(sourcePath string, refs []linkRef) {
 		case *ast.Image:
 			l.Destination = []byte(dest)
 			if r.images != nil {
-				size, ok := r.images.size(r.file(sourcePath, ref.dest))
-				setImageAttrs(l, size, ok)
+				r.image(l, sourcePath, ref.dest)
 			}
 		case *markdown.GenericDirective:
 			l.SetAttributeString(ref.attr, []byte(dest))
@@ -163,21 +167,64 @@ func (r *linkResolver) rewrite(sourcePath string, refs []linkRef) {
 	}
 }
 
-// file returns the file on disk that a local destination points at, or
-// "" if it is not a known asset or static file.
-func (r *linkResolver) file(sourcePath, dest string) string {
+// image sets the attributes of a Markdown image whose destination, as
+// written, is dest.
+func (r *linkResolver) image(img *ast.Image, sourcePath, dest string) {
+	file, out := r.file(sourcePath, dest)
+	if file == "" {
+		setImageAttrs(img, image.Point{}, r.attrs, "", "")
+		return
+	}
+	f := r.images.file(file)
+	var srcset string
+	if r.resize && f.size.X > 0 {
+		taken := func(p string) bool { return r.files[p] || r.staticFile(p) != "" }
+		if copies := r.images.resized(file, out, f, taken); len(copies) > 0 {
+			var b strings.Builder
+			for _, c := range copies {
+				fmt.Fprintf(&b, "%s %dw, ", r.srcsetURL(c.out), c.width)
+			}
+			fmt.Fprintf(&b, "%s %dw", r.srcsetURL(out), f.size.X)
+			srcset = b.String()
+		}
+	}
+	setImageAttrs(img, f.size, r.attrs, srcset, r.images.cfg.Sizes)
+}
+
+// srcsetURL is the URL of an output path in a srcset, where a comma
+// would end the candidate.
+func (r *linkResolver) srcsetURL(out string) string {
+	u := render.RelURL(r.baseURL, (&url.URL{Path: "/" + out}).EscapedPath())
+	return strings.ReplaceAll(u, ",", "%2C")
+}
+
+// file returns the file on disk that a local destination points at and
+// its output path, or "" if it is not a known asset or static file.
+func (r *linkResolver) file(sourcePath, dest string) (file, out string) {
 	u, err := url.Parse(dest)
 	if err != nil || u.Scheme != "" || u.Host != "" || u.Opaque != "" || u.Path == "" {
-		return ""
+		return "", ""
 	}
 	if !strings.HasPrefix(u.Path, "/") {
-		return r.srcs[r.assets[path.Join(path.Dir(sourcePath), u.Path)]]
+		out = r.assets[path.Join(path.Dir(sourcePath), u.Path)]
+		return r.srcs[out], out
 	}
-	if src := r.srcs[strings.TrimPrefix(versionPath(r.prefix, u.Path), "/")]; src != "" {
-		return src
+	out = strings.TrimPrefix(versionPath(r.prefix, u.Path), "/")
+	if src := r.srcs[out]; src != "" {
+		return src, out
 	}
+	out = strings.TrimPrefix(path.Clean(u.Path), "/")
+	if f := r.staticFile(out); f != "" {
+		return f, out
+	}
+	return "", ""
+}
+
+// staticFile returns the file in the static directories served at out,
+// or "".
+func (r *linkResolver) staticFile(out string) string {
 	for _, dir := range slices.Backward(r.static) {
-		f := filepath.Join(dir, filepath.FromSlash(path.Clean(u.Path)))
+		f := filepath.Join(dir, filepath.FromSlash(out))
 		if fi, err := os.Stat(f); err == nil && fi.Mode().IsRegular() {
 			return f
 		}

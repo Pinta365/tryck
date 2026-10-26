@@ -34,6 +34,7 @@ type Config struct {
 	Defaults DefaultsConfig `yaml:"defaults"`
 	Theme    ThemeConfig    `yaml:"theme"`
 	Versions VersionsConfig `yaml:"versions"`
+	Images   ImagesConfig   `yaml:"images"`
 	// Plugins maps a plugin's config name to its raw section. Each plugin
 	// decodes its own section.
 	Plugins map[string]map[string]any `yaml:"plugins"`
@@ -63,6 +64,14 @@ type BuildConfig struct {
 	UnsafeHTML  bool   `yaml:"unsafeHTML"`
 	LastUpdated bool   `yaml:"lastUpdated"` // read each page's last commit date from git
 	Workers     int    `yaml:"workers"`     // 0 = runtime.NumCPU()
+}
+
+// ImagesConfig controls resized copies of Markdown images.
+type ImagesConfig struct {
+	Resize  bool   `yaml:"resize"`  // write smaller copies and a srcset
+	Widths  []int  `yaml:"widths"`  // widths of the copies, in pixels
+	Quality int    `yaml:"quality"` // JPEG quality, 1-100
+	Sizes   string `yaml:"sizes"`   // the sizes attribute
 }
 
 type DefaultsConfig struct {
@@ -166,6 +175,12 @@ func Defaults() *Config {
 			ImageAttributes: true,
 		},
 		Theme: ThemeConfig{ColorScheme: "auto"},
+		Images: ImagesConfig{
+			Widths:  []int{480, 800, 1600},
+			Quality: 85,
+			// The built-in theme's content column is at most 46rem wide.
+			Sizes: "(min-width: 48rem) 46rem, calc(100vw - 2rem)",
+		},
 		Plugins: map[string]map[string]any{
 			"readingTime":        {"enabled": true, "wordsPerMinute": 200},
 			"syntaxHighlighting": {"enabled": true, "theme": "github", "darkTheme": "github-dark", "lineNumbers": true},
@@ -533,6 +548,17 @@ func (c *Config) Validate() []diag.Diagnostic {
 		for i, o := range v.Older {
 			check(fmt.Sprintf("versions.older[%d].name", i), o.Name)
 		}
+	}
+	if len(c.Images.Widths) == 0 {
+		bad("images.widths must list at least one width")
+	}
+	for _, w := range c.Images.Widths {
+		if w < 1 || w > 10000 {
+			bad("images.widths must be between 1 and 10000, got %d", w)
+		}
+	}
+	if q := c.Images.Quality; q < 1 || q > 100 {
+		bad("images.quality must be between 1 and 100, got %d", q)
 	}
 	if lo, hi := c.Defaults.TOCDepth[0], c.Defaults.TOCDepth[1]; lo < 1 || hi > 6 || lo > hi {
 		bad("defaults.tocDepth must be [min, max] with 1 <= min <= max <= 6, got [%d, %d]", lo, hi)

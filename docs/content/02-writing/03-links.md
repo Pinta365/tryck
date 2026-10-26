@@ -52,7 +52,26 @@ tryck sets three attributes on every Markdown image:
 - `width` and `height` are read from the image file, so the browser reserves the image's space before it loads and the text below does not jump. This works for PNG, JPEG, GIF and WebP images in `content/` or `static/`; other images, such as SVG or external ones, get no size. The built-in theme scales images down to fit the page and keeps their aspect ratio.
 - `loading="lazy"` makes the browser load images further down the page only when the reader scrolls near them.
 
-Images are not resized or converted. Set `defaults.imageAttributes: false` to turn this off, for example in a theme whose stylesheet has no `img { height: auto; }`. Images written as HTML `<img>` tags are left unchanged.
+Set `defaults.imageAttributes: false` to turn this off, for example in a theme whose stylesheet has no `img { height: auto; }`. Images written as HTML `<img>` tags are left unchanged.
+
+### Resized copies
+
+A large screenshot or photo is usually shown much smaller than it is. With `images.resize: true`, tryck writes smaller copies of PNG and JPEG images next to the original and lists them in a `srcset`, so each browser downloads only the size it needs:
+
+```html
+<img src="/guide/shot.png" alt="Shot" width="2400" height="1500"
+  srcset="/guide/shot-480w.png 480w, /guide/shot-800w.png 800w, /guide/shot-1600w.png 1600w, /guide/shot.png 2400w"
+  sizes="(min-width: 48rem) 46rem, calc(100vw - 2rem)" loading="lazy">
+```
+
+- A copy is made for each width in `images.widths` (default `[480, 800, 1600]`) that is smaller than the image. An image narrower than every width is left as it is.
+- A copy that is not smaller in bytes than the original is skipped. This happens with some PNGs that use a small color palette.
+- Copies keep the original's format. JPEG copies use `images.quality` (default `85`). JPEG photos taken on their side are turned the way browsers show them.
+- GIF images (which may be animated), WebP images and SVG images are not resized.
+- `sizes` tells the browser how wide the image is shown. The default matches the built-in theme's content column; set `images.sizes` if your theme is wider or narrower.
+- A copy that would overwrite a file in `content/` or `static/` is not written, with an `image.conflict` warning.
+
+Resizing a large image takes a moment, so copies are kept in tryck's cache directory (`tryck/images` in your user cache directory) and reused by later builds, including `tryck dev`. See [Deploying](../06-deploying.md#resized-images) to keep the cache between CI builds.
 
 ## Link checking
 

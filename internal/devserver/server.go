@@ -321,10 +321,11 @@ func (s *Server) reloadConfig() bool {
 
 func (s *Server) build(ctx context.Context) (*build.Site, error) {
 	site, err := build.Build(ctx, s.cfg, build.Options{
-		Dev:     true,
-		Logger:  s.log,
-		Plugins: s.opts.Plugins,
-		Cache:   s.cache,
+		Dev:        true,
+		Logger:     s.log,
+		Plugins:    s.opts.Plugins,
+		Cache:      s.cache,
+		ImageCache: build.ImageCacheDir(),
 	})
 	if err == nil {
 		s.builds.Add(1)
