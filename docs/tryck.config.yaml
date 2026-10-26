@@ -16,7 +16,7 @@ theme:
   nav:
     - title: GitHub
       url: https://github.com/Pinta365/tryck
-  footer: "MIT licensed. Built with [tryck](https://github.com/Pinta365/tryck)."
+  footer: "MIT licensed. Built with [tryck](https://github.com/Pinta365/tryck). [llms.txt](/llms.txt) for AI tools."
   css: [/css/docs.css]
   editUrl: https://github.com/Pinta365/tryck/edit/main/docs/
   params:
