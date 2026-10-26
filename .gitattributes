@@ -1,0 +1,3 @@
+# tryck embeds templates and assets and compares test output byte for byte,
+# so text files keep LF line endings on every platform.
+* text=auto eol=lf
