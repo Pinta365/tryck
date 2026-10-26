@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  TRYCK_VERSION: v0.10.0
+  TRYCK_VERSION: v0.11.0
 
 jobs:
   build:
