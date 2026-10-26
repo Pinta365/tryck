@@ -52,8 +52,20 @@ func TestFeedAtom(t *testing.T) {
 	if !(second < first && first < news) || strings.Contains(atom, "Guide") || strings.Contains(atom, "Draft") {
 		t.Errorf("entries wrong or out of order:\n%s", atom)
 	}
-	if !strings.Contains(out["guide/index.html"], `<link rel="alternate" type="application/atom+xml" title="Docs" href="/feed.xml">`+"\n</head>") {
+	if !strings.Contains(out["guide/index.html"], `<link rel="alternate" type="application/atom+xml" title="Docs" href="/feed.xml">`+"\n") {
 		t.Error("pages must link the feed in <head>")
+	}
+}
+
+func TestFeedLinkKeepsHeadEndLast(t *testing.T) {
+	site := mustBuild(t, writeSite(t, map[string]string{
+		"layouts/partials/head-end.html": `<script defer src="/a.js"></script>`,
+		"content/post.md":                "---\ndate: 2026-01-01\n---\n# Post\n",
+	}))
+	html := string(site.Outputs["post/index.html"])
+	feed := strings.Index(html, `type="application/atom+xml"`)
+	if feed < 0 || feed > strings.Index(html, "</title>")+200 || !strings.Contains(html, "<script defer src=\"/a.js\"></script>\n</head>") {
+		t.Errorf("the feed link must come before the head-end partial, which ends <head>:\n%s", html)
 	}
 }
 

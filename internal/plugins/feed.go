@@ -127,9 +127,7 @@ func (f *Feed) OnPageRendered(p *plugin.Page, v plugin.SiteView) error {
 		fmt.Fprintf(&links, "<link rel=\"alternate\" type=\"%s\" title=\"%s\" href=\"%s\">\n",
 			typ, template.HTMLEscapeString(fd.title), template.HTMLEscapeString(render.RelURL(f.site.BaseURL, "/"+fd.file)))
 	}
-	if links.Len() > 0 {
-		p.HTML = bytes.Replace(p.HTML, []byte("</head>"), []byte(links.String()+"</head>"), 1)
-	}
+	p.HTML = addToHead(p.HTML, links.String())
 	return nil
 }
 
