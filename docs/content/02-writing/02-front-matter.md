@@ -50,6 +50,8 @@ reviewers:
 
 Use them in a custom layout as `.Page.Params.status` and `.Page.Params.reviewers`.
 
+The [social](../05-extending/01-built-in-plugins.md#social) plugin reads one such parameter: `image`, the picture shown when the page is shared, such as `image: /img/widget-card.png`.
+
 ## Drafts
 
 A page with `draft: true` is:

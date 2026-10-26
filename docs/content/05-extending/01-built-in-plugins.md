@@ -3,7 +3,7 @@ title: Built-in plugins
 description: What each built-in plugin does and how to configure it.
 ---
 
-Eleven plugins ship with tryck. They are all enabled by default; a plugin with no section in the config file is still active. Configure a plugin under its name in the `plugins` section, and turn it off with `enabled: false`.
+Twelve plugins ship with tryck. They are all enabled by default; a plugin with no section in the config file is still active. Configure a plugin under its name in the `plugins` section, and turn it off with `enabled: false`.
 
 ```yaml
 plugins:
@@ -26,6 +26,7 @@ An unknown option in a plugin section is a `config.unknownKey` warning, and an u
 | `redirects` | — | on | Writes a redirect page per front matter alias. |
 | `mermaid` | `url` | jsDelivr mermaid 11 | Draws ` ```mermaid ` blocks. |
 | `math` | `inline`, `macros` | `true`, `{}` | Renders `$...$`, `$$...$$` and ` ```math ` formulas to MathML. |
+| `social` | `image`, `twitter` | none | Adds Open Graph and Twitter card tags, for link previews. |
 | `feed` | `sections`, `limit`, `format`, `author` | `[/]`, `20`, `atom`, site title | Writes Atom or RSS feeds of dated pages. |
 | `llmsTxt` | `pages`, `full`, `details`, `optional`, `exclude`, `versions` | `true`, `false`, `""`, `[]`, `[]`, `true` | Writes `/llms.txt` and Markdown copies of pages for AI tools. |
 
@@ -77,6 +78,52 @@ Renders TeX formulas, written as `$...$`, `$$...$$` or a ` ```math ` block, to M
 | `macros` | `{}` | Commands of your own, by name, such as `'\RR': '\mathbb{R}'`. Every formula can use them. |
 
 A formula that cannot be parsed is a `math.error` warning and is shown as its source. With the plugin disabled, dollars are text and ` ```math ` blocks are code. See [Math](../02-writing/05-code-and-diagrams.md#math) for the syntax and the rules that keep prices from turning into formulas.
+
+## social
+
+Adds [Open Graph](https://ogp.me) and Twitter card tags to every page, so a link shared in a chat, a social network or a forum shows the page's title, description and an image instead of a bare URL.
+
+| Option | Default | Meaning |
+| :- | :- | :- |
+| `image` | none | The site's card image: a site path such as `/img/card.png`, or an `https://` URL. |
+| `twitter` | none | The site's account on X (Twitter), such as `@pinta365`, for `twitter:site`. The `@` may be left out. |
+
+```yaml
+plugins:
+  social:
+    image: /img/card.png
+    twitter: "@pinta365"
+```
+
+A page's `image` front matter replaces the site's image for that page:
+
+```yaml
+---
+title: Widgets
+image: /img/widgets-card.png
+---
+```
+
+Each page gets these tags, after its `<title>`:
+
+| Tag | Value |
+| :- | :- |
+| `og:type` | `article` for a page with a `date`, otherwise `website` |
+| `og:site_name` | `site.title` |
+| `og:title` | the page title |
+| `og:description` | the page's `description`, or `site.description` |
+| `og:url` | the page's absolute URL |
+| `og:image` | the image's absolute URL, when there is an image |
+| `og:image:width`, `og:image:height` | the image's size, when it is a PNG or JPEG in `static/` |
+| `article:published_time` | the page's `date`, for a page that has one |
+| `twitter:card` | `summary_large_image` with an image, otherwise `summary` |
+| `twitter:site` | the `twitter` option, when set |
+
+X (Twitter), Mastodon, Slack, Discord and others read the Open Graph tags; X uses its own tags only for the card type and the account.
+
+The image should be about 1200×630 pixels, the size most platforms show in full, as PNG or JPEG. Platforms do not read SVG. An image path that does not start with `/` or `http` is a `plugin.config` error in the config and a `social.image` warning in front matter, where the site's image is used instead. A site path that is not a file on the site is a `social.image` warning.
+
+The tags need absolute URLs, so they are only written when `site.baseUrl` has a host, such as `https://example.com/`. With a path-only `baseUrl` such as `/` the plugin writes no tags and reports `social.baseUrl` as an info message, shown with `--verbose`; build with `--base-url` set to the site's address, as the [deploy workflows](../06-deploying.md) do, to get them.
 
 ## feed
 

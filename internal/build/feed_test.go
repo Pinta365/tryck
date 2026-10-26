@@ -64,7 +64,7 @@ func TestFeedLinkKeepsHeadEndLast(t *testing.T) {
 	}))
 	html := string(site.Outputs["post/index.html"])
 	feed := strings.Index(html, `type="application/atom+xml"`)
-	if feed < 0 || feed > strings.Index(html, "</title>")+200 || !strings.Contains(html, "<script defer src=\"/a.js\"></script>\n</head>") {
+	if feed < 0 || feed > strings.Index(html, `<script defer src="/a.js">`) || !strings.Contains(html, "<script defer src=\"/a.js\"></script>\n</head>") {
 		t.Errorf("the feed link must come before the head-end partial, which ends <head>:\n%s", html)
 	}
 }

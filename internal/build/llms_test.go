@@ -86,9 +86,8 @@ Done.
 		}
 	}
 
-	// Pages link their copy and llms.txt in <head> (llms.txt v2), after
-	// the title so the head-end partial stays last.
-	links := "</title>\n<link rel=\"alternate\" type=\"text/markdown\" href=\"/docs/guide/setup/index.md\">\n<link rel=\"describedby\" href=\"/docs/llms.txt\">\n"
+	// Pages link their copy and llms.txt in <head> (llms.txt v2).
+	links := "<link rel=\"alternate\" type=\"text/markdown\" href=\"/docs/guide/setup/index.md\">\n<link rel=\"describedby\" href=\"/docs/llms.txt\">\n"
 	if html := string(site.Outputs["guide/setup/index.html"]); !strings.Contains(html, links) {
 		t.Errorf("guide/setup/index.html has no llms links in <head>:\n%s", html)
 	}

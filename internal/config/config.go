@@ -189,6 +189,7 @@ func Defaults() *Config {
 			"search":             {"enabled": true},
 			"mermaid":            {"enabled": true},
 			"math":               {"enabled": true},
+			"social":             {"enabled": true},
 			"feed":               {"enabled": true},
 			"llmsTxt":            {"enabled": true},
 		},

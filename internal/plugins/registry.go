@@ -29,6 +29,7 @@ func builtins(cfg *config.Config) []plugin.Plugin {
 		&Redirects{},
 		&Mermaid{},
 		&Math{},
+		&Social{StaticDirs: cfg.StaticDirs()},
 		&Feed{},
 		&LLMsTxt{UnsafeHTML: cfg.Build.UnsafeHTML},
 	}
