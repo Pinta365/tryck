@@ -157,7 +157,7 @@ func (s *Server) forward(ctx context.Context) {
 			if !ok {
 				return
 			}
-			if ignored(ev.Name) || ev.Op == fsnotify.Chmod {
+			if !relevant(ev) {
 				continue
 			}
 			s.watcher.handleCreate(ev)

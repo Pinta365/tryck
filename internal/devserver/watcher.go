@@ -66,6 +66,23 @@ func (w *watcher) handleCreate(ev fsnotify.Event) {
 
 func (w *watcher) close() error { return w.fs.Close() }
 
+// relevant reports whether an event can change the site. It drops
+// editor temporary files, permission changes, and writes to a directory:
+// Windows reports a directory as written whenever a file in it changes,
+// and that file has its own event. A directory that is created, removed
+// or renamed is still relevant.
+func relevant(ev fsnotify.Event) bool {
+	if ignored(ev.Name) || ev.Op == fsnotify.Chmod {
+		return false
+	}
+	if ev.Op == fsnotify.Write {
+		if fi, err := os.Stat(ev.Name); err == nil && fi.IsDir() {
+			return false
+		}
+	}
+	return true
+}
+
 // ignored reports editor temporary files and other noise.
 func ignored(path string) bool {
 	name := filepath.Base(path)

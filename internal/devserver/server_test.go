@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/fsnotify/fsnotify"
 
 	"github.com/Pinta365/tryck/internal/config"
 )
@@ -292,5 +293,32 @@ func TestThemeFolder(t *testing.T) {
 	e.expectReload()
 	if _, body := e.get("/"); !strings.Contains(body, "<footer>custom</footer>") {
 		t.Error("theme layout change not applied")
+	}
+}
+
+func TestRelevant(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "a.md")
+	if err := os.WriteFile(file, []byte("# A\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		ev   fsnotify.Event
+		want bool
+	}{
+		{fsnotify.Event{Name: file, Op: fsnotify.Write}, true},
+		{fsnotify.Event{Name: file, Op: fsnotify.Create}, true},
+		{fsnotify.Event{Name: file, Op: fsnotify.Chmod}, false},
+		// Windows reports the directory of a changed file as written.
+		{fsnotify.Event{Name: dir, Op: fsnotify.Write}, false},
+		{fsnotify.Event{Name: dir, Op: fsnotify.Create}, true},
+		{fsnotify.Event{Name: filepath.Join(dir, "gone"), Op: fsnotify.Remove}, true},
+		{fsnotify.Event{Name: filepath.Join(dir, "gone"), Op: fsnotify.Write}, true}, // vanished: keep
+		{fsnotify.Event{Name: filepath.Join(dir, ".a.md.swp"), Op: fsnotify.Write}, false},
+	}
+	for _, tt := range tests {
+		if got := relevant(tt.ev); got != tt.want {
+			t.Errorf("relevant(%s %s) = %v, want %v", tt.ev.Op, filepath.Base(tt.ev.Name), got, tt.want)
+		}
 	}
 }
