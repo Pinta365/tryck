@@ -45,7 +45,7 @@
 // Code blocks that scroll sideways get keyboard focus, so they can be
 // scrolled without a mouse. Called again when a tab panel is shown.
 const tryckScrollables = () => {
-  for (const pre of document.querySelectorAll("pre")) {
+  for (const pre of document.querySelectorAll("pre, .math")) {
     if (pre.scrollWidth > pre.clientWidth) pre.tabIndex = 0;
     else pre.removeAttribute("tabindex");
   }

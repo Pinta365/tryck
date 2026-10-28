@@ -67,6 +67,9 @@ pre, code { font-family: var(--font-mono); font-size: 0.9em; }
 pre { padding: 1rem; overflow-x: auto; background: var(--bg-alt); border-radius: 6px; }
 :not(pre) > code { padding: 0.1em 0.3em; background: var(--bg-alt); border-radius: 4px; }
 .math { margin: 1rem 0; overflow-x: auto; overflow-y: hidden; } /* a wide formula scrolls, not the page */
+.math-display { display: block; }
+/* Fonts with math tables, so brackets stretch and limits sit right. */
+math { font-family: "Latin Modern Math", "STIX Two Math", "Cambria Math", "Noto Sans Math", math; }
 .math-error { color: var(--danger); }
 table { border-collapse: collapse; display: block; overflow-x: auto; }
 th, td { padding: 0.4rem 0.75rem; border: 1px solid var(--line); }
@@ -102,6 +105,7 @@ details.details > summary { cursor: pointer; font-weight: 600; }
   .tab-label, .tabs-js .tab-label { display: block !important; }
   pre, .admonition, table { break-inside: avoid; }
   pre { white-space: pre-wrap; }
+  .math, .math-display { overflow: visible; }
 }
 .version-banner { padding: 0.5rem 1rem; background: var(--bg-alt); border-bottom: 1px solid var(--line); }
 .versions { position: relative; }

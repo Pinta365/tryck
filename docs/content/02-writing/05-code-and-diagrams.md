@@ -71,7 +71,7 @@ To run offline, save the mermaid module under `static/` and point `url` at that 
 
 ## Math
 
-Write formulas in TeX, the way GitHub and most Markdown tools accept them. tryck renders them at build time with [KaTeX](https://katex.org) to MathML, which browsers display natively, so pages need no script, stylesheet or font for math.
+Write formulas in TeX, the way GitHub and most Markdown tools accept them. tryck renders them at build time with [KaTeX](https://katex.org) to MathML, which browsers display natively, so pages need no script or stylesheet for math. Browsers draw MathML with a math font installed on the reader's system, such as Cambria Math on Windows and STIX Two Math on macOS; the built-in theme asks for these and the common Linux ones (Latin Modern Math, Noto Sans Math) by name. A formula too wide for the page scrolls sideways in its own box.
 
 The area of a circle is $A = \pi r^2$, and
 

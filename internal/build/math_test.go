@@ -40,7 +40,14 @@ func TestMath(t *testing.T) {
 	if got := formulas(html); strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Errorf("formulas:\n%q\nwant:\n%q", got, want)
 	}
-	for _, s := range []string{`double-struck">R</mi>`, "Not math: $5 and $10, $x$, <code>$code$</code>, a $ alone, $ spaced $.", `<div class="math"><span class="katex">`} {
+	for _, s := range []string{
+		`double-struck">R</mi>`,
+		"Not math: $5 and $10, $x$, <code>$code$</code>, a $ alone, $ spaced $.",
+		`<div class="math"><span class="katex">`,
+		// $$...$$ in a paragraph gets a wrapper too, so a wide one scrolls
+		// instead of widening the page.
+		`<p>In a paragraph <span class="math math-display"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block">`,
+	} {
 		if !strings.Contains(html, s) {
 			t.Errorf("missing %q in:\n%s", s, html)
 		}

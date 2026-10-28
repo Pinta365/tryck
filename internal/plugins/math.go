@@ -21,7 +21,8 @@ import (
 )
 
 // Math renders TeX formulas to MathML at build time with KaTeX, so pages
-// need no script, stylesheet or font for them. It understands the syntax
+// need no script or stylesheet for them; browsers draw them with a math
+// font on the reader's system. It understands the syntax
 // GitHub does: $...$ inline (with Inline), $$...$$ for a displayed
 // formula, alone on its lines or within a paragraph, and ```math blocks.
 // A formula KaTeX cannot parse is a math.error warning and is shown as
@@ -235,9 +236,14 @@ func renderMath(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.Walk
 	if out == "" { // not rendered: the math plugin's page hook did not run
 		out = mathError(mn.TeX, "not rendered", mn.Display)
 	}
-	if _, ok := n.(*MathBlock); ok {
+	switch {
+	case n.Kind() == KindMathBlock:
 		_, _ = w.WriteString(`<div class="math">` + out + "</div>\n")
-	} else {
+	case mn.Display:
+		// $$...$$ within a paragraph: a block of its own that scrolls when
+		// it is too wide, like a displayed formula on its own lines.
+		_, _ = w.WriteString(`<span class="math math-display">` + out + "</span>")
+	default:
 		_, _ = w.WriteString(out)
 	}
 	return ast.WalkSkipChildren, nil

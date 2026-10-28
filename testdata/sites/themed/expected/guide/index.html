@@ -70,7 +70,7 @@
 
 
 const tryckScrollables = () => {
-  for (const pre of document.querySelectorAll("pre")) {
+  for (const pre of document.querySelectorAll("pre, .math")) {
     if (pre.scrollWidth > pre.clientWidth) pre.tabIndex = 0;
     else pre.removeAttribute("tabindex");
   }
