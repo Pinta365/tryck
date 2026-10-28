@@ -5,6 +5,7 @@ weight: 9
 
 What changed in each release of tryck, newest first. Subscribe to the [feed](/feed.xml) to hear about new releases, or watch the [releases page](https://github.com/Pinta365/tryck/releases) on GitHub.
 
+- [v0.11.1](v0.11.1.md): math fixes on narrow screens and without math fonts
 - [v0.11.0](v0.11.0.md): math formulas and link previews
 - [v0.10.0](v0.10.0.md): llms.txt per docs version, and feed links before head-end
 - [v0.9.0](v0.9.0.md): llms.txt v2: page copies at index.md and link relations
