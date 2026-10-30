@@ -22,13 +22,14 @@ import (
 
 // Social adds Open Graph and Twitter card tags to every page, so a link
 // shared in a chat or social network shows the page's title, description
-// and an image. Image is the site's card image; a page's "image" front
-// matter replaces it. Both are site paths ("/img/card.png") or absolute
+// and an image. Image is the site's card image, described by ImageAlt; a
+// page's "image" front matter replaces it, described by its "imageAlt". Both are site paths ("/img/card.png") or absolute
 // URLs. The tags need absolute URLs, so a site.baseUrl without a host
 // gets a social.baseUrl warning and no tags.
 type Social struct {
-	Image   string `yaml:"image"`
-	Twitter string `yaml:"twitter"`
+	Image    string `yaml:"image"`
+	ImageAlt string `yaml:"imageAlt"` // describes Image for screen readers
+	Twitter  string `yaml:"twitter"`
 	// StaticDirs are searched for a local image's size, later first.
 	StaticDirs []string `yaml:"-"`
 
@@ -41,7 +42,7 @@ type Social struct {
 }
 
 func (*Social) Name() string         { return "social" }
-func (*Social) ConfigKeys() []string { return []string{"image", "twitter"} }
+func (*Social) ConfigKeys() []string { return []string{"image", "imageAlt", "twitter"} }
 
 func (s *Social) Init(cfg map[string]any, site plugin.SiteInfo) error {
 	*s = Social{StaticDirs: s.StaticDirs, site: site, images: map[string]string{}, sizes: map[string]image.Point{}}
@@ -79,12 +80,14 @@ func (s *Social) OnPageRendered(p *plugin.Page, v plugin.SiteView) error {
 	if !ok {
 		return nil
 	}
-	img := s.Image
+	img, alt := s.Image, s.ImageAlt
 	if ref, ok := info.Params["image"].(string); ok && ref != "" {
 		if err := checkImageRef(ref); err != nil {
 			p.Diags.Report(plugin.Diagnostic{Severity: plugin.Warning, Code: "social.image", Message: "front matter image " + err.Error()})
 		} else {
+			// The site's description does not fit the page's own image.
 			img = ref
+			alt, _ = info.Params["imageAlt"].(string)
 		}
 	}
 
@@ -107,6 +110,7 @@ func (s *Social) OnPageRendered(p *plugin.Page, v plugin.SiteView) error {
 	if img != "" {
 		card = "summary_large_image"
 		meta("property", "og:image", render.AbsURL(s.site.BaseURL, img))
+		meta("property", "og:image:alt", oneLine(alt))
 		if strings.HasPrefix(img, "/") {
 			if size, ok := s.size(img, info.URL); ok {
 				meta("property", "og:image:width", fmt.Sprint(size.X))
@@ -119,6 +123,9 @@ func (s *Social) OnPageRendered(p *plugin.Page, v plugin.SiteView) error {
 	}
 	meta("name", "twitter:card", card)
 	meta("name", "twitter:site", s.Twitter)
+	if img != "" {
+		meta("name", "twitter:image:alt", oneLine(alt))
+	}
 	p.HTML = addToHead(p.HTML, b.String())
 	return nil
 }

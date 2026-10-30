@@ -86,21 +86,24 @@ Adds [Open Graph](https://ogp.me) and Twitter card tags to every page, so a link
 | Option | Default | Meaning |
 | :- | :- | :- |
 | `image` | none | The site's card image: a site path such as `/img/card.png`, or an `https://` URL. |
+| `imageAlt` | none | A description of the image for screen readers, such as `The project logo on a dark background`. |
 | `twitter` | none | The site's account on X (Twitter), such as `@pinta365`, for `twitter:site`. The `@` may be left out. |
 
 ```yaml
 plugins:
   social:
     image: /img/card.png
+    imageAlt: The project logo on a dark background
     twitter: "@pinta365"
 ```
 
-A page's `image` front matter replaces the site's image for that page:
+A page's `image` front matter replaces the site's image for that page, and its `imageAlt` describes it. The site's `imageAlt` is not used for a page's own image, since it describes a different picture:
 
 ```yaml
 ---
 title: Widgets
 image: /img/widgets-card.png
+imageAlt: Three widgets side by side
 ---
 ```
 
@@ -114,6 +117,7 @@ Each page gets these tags, after its `<title>`:
 | `og:description` | the page's `description`, or `site.description` |
 | `og:url` | the page's absolute URL |
 | `og:image` | the image's absolute URL, when there is an image |
+| `og:image:alt`, `twitter:image:alt` | the image's `imageAlt`, when set |
 | `og:image:width`, `og:image:height` | the image's size, when it is a PNG or JPEG in `static/` |
 | `article:published_time` | the page's `date`, for a page that has one |
 | `twitter:card` | `summary_large_image` with an image, otherwise `summary` |
@@ -181,7 +185,7 @@ plugins:
     exclude: [/internal/]
 ```
 
-### llms.txt
+### llms.txt {#the-llms-txt-file}
 
 The file follows the [llms.txt format](https://llmstxt.org): the site title as `#`, `site.description` as a quote, `details`, and then one `##` section per top-level folder of the navigation, in navigation order. The home page and pages outside any folder come first, in a section called `Pages`. Each entry links the page's Markdown copy and adds its front matter `description`:
 

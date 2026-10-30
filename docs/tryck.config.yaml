@@ -12,6 +12,7 @@ plugins:
     optional: [/releases/]
   social:
     image: /img/card.jpg
+    imageAlt: "A terminal prompt reading $ tryck, with the line Docs from Markdown, in one binary."
 
 theme:
   path: themes/pinta

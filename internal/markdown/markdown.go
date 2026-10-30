@@ -84,11 +84,11 @@ func (p *Processor) Parse(source []byte) (ast.Node, []Issue) {
 	ids := newIDs()
 	ctx := parser.NewContext(parser.WithIDs(ids))
 	doc := p.md.Parser().Parse(text.NewReader(source), parser.WithContext(ctx))
-	return doc, p.inspect(doc, ids.suffixed)
+	return doc, p.inspect(doc, source, ids.suffixed)
 }
 
 // inspect walks a parsed document for problems the parser cannot report.
-func (p *Processor) inspect(doc ast.Node, suffixed []string) []Issue {
+func (p *Processor) inspect(doc ast.Node, source []byte, suffixed []string) []Issue {
 	var issues []Issue
 	dup := map[string]bool{}
 	for _, id := range suffixed {
@@ -124,6 +124,12 @@ func (p *Processor) inspect(doc ast.Node, suffixed []string) []Issue {
 					"tabs directive has no @tab sections"})
 			}
 		}
+		if img, ok := n.(*ast.Image); ok && !hasText(img, source) {
+			// Info, not a warning: an empty alt text is also how authors
+			// mark an image as decorative.
+			issues = append(issues, Issue{diag.Info, "image.alt", nodeOffset(img.Parent()),
+				fmt.Sprintf("image %s has no alt text; describe it in ![...], unless it is decorative", img.Destination)})
+		}
 		if h, ok := n.(*ast.Heading); ok {
 			if v, ok := h.AttributeString("id"); ok {
 				if id, _ := v.([]byte); dup[string(id)] {
@@ -150,6 +156,19 @@ func (p *Processor) Unknown(doc ast.Node) []Issue {
 		return ast.WalkContinue, nil
 	})
 	return issues
+}
+
+// hasText reports whether n has text other than spaces.
+func hasText(n ast.Node, source []byte) bool {
+	found := false
+	_ = ast.Walk(n, func(c ast.Node, entering bool) (ast.WalkStatus, error) {
+		if t, ok := c.(*ast.Text); ok && entering && len(bytes.TrimSpace(t.Segment.Value(source))) > 0 {
+			found = true
+			return ast.WalkStop, nil
+		}
+		return ast.WalkContinue, nil
+	})
+	return found
 }
 
 // nodeOffset returns the source offset of a block node's first line, or

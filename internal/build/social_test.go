@@ -83,3 +83,34 @@ func TestSocialConfig(t *testing.T) {
 		t.Errorf("want a plugin.config error, got %v", site.Diags)
 	}
 }
+
+func TestSocialImageAlt(t *testing.T) {
+	site := mustBuild(t, writeSite(t, map[string]string{
+		"tryck.config.yaml": "site:\n  baseUrl: https://example.com/\nplugins:\n  social:\n    image: /img/card.png\n    imageAlt: The tryck logo on a dark background\n",
+		"static/img/card.png":  encodePNG(t, 1200, 630),
+		"static/img/chart.png": encodePNG(t, 1200, 630),
+		"content/a.md":         "# A\n",
+		"content/chart.md":     "---\nimage: /img/chart.png\nimageAlt: \"Build times: 80 ms for 1,000 pages\"\n---\n# Chart\n",
+		"content/bare.md":      "---\nimage: /img/chart.png\n---\n# Bare\n",
+	}))
+	for path, want := range map[string][]string{
+		"a/index.html": {
+			`<meta property="og:image:alt" content="The tryck logo on a dark background">`,
+			`<meta name="twitter:image:alt" content="The tryck logo on a dark background">`,
+		},
+		"chart/index.html": {
+			`<meta property="og:image:alt" content="Build times: 80 ms for 1,000 pages">`,
+			`<meta name="twitter:image:alt" content="Build times: 80 ms for 1,000 pages">`,
+		},
+	} {
+		for _, w := range want {
+			if !strings.Contains(string(site.Outputs[path]), w) {
+				t.Errorf("%s: missing %s", path, w)
+			}
+		}
+	}
+	// A page's own image does not borrow the site image's description.
+	if bare := string(site.Outputs["bare/index.html"]); strings.Contains(bare, "image:alt") {
+		t.Errorf("bare/index.html has an alt text for an image it does not describe")
+	}
+}

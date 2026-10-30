@@ -59,6 +59,7 @@ Diagnostics go to standard error, sorted by file, line and column.
 | `directive.unknown` | warning | A `:::` name has no built-in or plugin renderer; it is rendered as a plain `<div>`. | Register a `DirectiveRenderer`, or fix the name. |
 | `directive.attrs` | warning | A directive's `{...}` attribute block could not be parsed, for example an unclosed quote. The attributes are ignored. | Fix the attribute syntax. |
 | `directive.tabContent` | warning | A `tabs` directive has content before the first `@tab` (shown above the tabs), or no `@tab` at all. | Put all content after an `@tab` line. |
+| `image.alt` | info | An image has no alt text, as in `![](diagram.png)`. Screen readers then skip it. | Describe the image: `![Build pipeline](diagram.png)`. Leave it empty only for a decorative image. |
 | `heading.duplicateId` | info | Two headings wanted the same ID; the later one got a numeric suffix. | Add `{#custom-id}` to choose an ID. |
 
 ## Suppressing a diagnostic

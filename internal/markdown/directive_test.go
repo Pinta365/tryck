@@ -238,6 +238,9 @@ func TestDirectiveIssues(t *testing.T) {
 		{"content before first tab", ":::tabs\nstray\n\n@tab A\na\n:::\n", []string{"2:warning[directive.tabContent]"}},
 		{"tabs without tabs", ":::tabs\n:::\n", []string{"1:warning[directive.tabContent]"}},
 		{"duplicate heading", "## A\n\n## A\n", []string{"3:info[heading.duplicateId]"}},
+		{"image without alt", "Text\n\n![](a.png)\n", []string{"3:info[image.alt]"}},
+		{"image with blank alt", "![  ](a.png)\n", []string{"1:info[image.alt]"}},
+		{"image with alt", "![A cat](a.png) and ![*bold* cat](b.png)\n", nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
