@@ -86,7 +86,7 @@ func TestSocialConfig(t *testing.T) {
 
 func TestSocialImageAlt(t *testing.T) {
 	site := mustBuild(t, writeSite(t, map[string]string{
-		"tryck.config.yaml": "site:\n  baseUrl: https://example.com/\nplugins:\n  social:\n    image: /img/card.png\n    imageAlt: The tryck logo on a dark background\n",
+		"tryck.config.yaml":    "site:\n  baseUrl: https://example.com/\nplugins:\n  social:\n    image: /img/card.png\n    imageAlt: The tryck logo on a dark background\n",
 		"static/img/card.png":  encodePNG(t, 1200, 630),
 		"static/img/chart.png": encodePNG(t, 1200, 630),
 		"content/a.md":         "# A\n",
