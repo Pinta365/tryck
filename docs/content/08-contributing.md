@@ -82,7 +82,7 @@ The [docs site](https://tryck.pinta.land) is deployed when a release is tagged, 
 
 ### Cutting a release
 
-Pushing a `v*` tag runs the release workflow, which tests and builds the binaries with GoReleaser and publishes them on the [releases page](https://github.com/Pinta365/tryck/releases), and deploys the docs. Before tagging, the release notes and the version the docs and starter download are updated with a small tool:
+Pushing a `v*` tag runs the release workflow, which tests and builds the binaries with GoReleaser and publishes them on the [releases page](https://github.com/Pinta365/tryck/releases), updates the Homebrew cask in [Pinta365/homebrew-tap](https://github.com/Pinta365/homebrew-tap) and the Scoop manifest in [Pinta365/scoop-bucket](https://github.com/Pinta365/scoop-bucket), and deploys the docs. The tap and bucket are written with the `TAP_GITHUB_TOKEN` secret, a fine-grained token with write access to those two repositories; it expires, and a release after that leaves them at the previous version until the secret is renewed. Before tagging, the release notes and the version the docs and starter download are updated with a small tool:
 
 ```sh
 go run ./internal/tools/release v0.11.0 "a short summary for the release index"

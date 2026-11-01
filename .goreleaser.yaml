@@ -16,8 +16,6 @@ builds:
     goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     ignore:
-      - goos: darwin
-        goarch: amd64
       - goos: windows
         goarch: arm64
 
@@ -42,3 +40,38 @@ release:
   github:
     owner: Pinta365
     name: tryck
+
+# brew install pinta365/tap/tryck (macOS). TAP_GITHUB_TOKEN can push to
+# Pinta365/homebrew-tap and Pinta365/scoop-bucket. Prereleases are not
+# published to either.
+homebrew_casks:
+  - name: tryck
+    repository:
+      owner: Pinta365
+      name: homebrew-tap
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    homepage: https://tryck.pinta.land
+    description: A single-binary static site generator for technical documentation.
+    license: MIT
+    skip_upload: auto
+    hooks:
+      post:
+        # The binaries are not signed, so macOS would refuse to run one
+        # downloaded with its quarantine flag.
+        install_steps: |
+          on_macos do
+            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/tryck"]
+          end
+
+# scoop bucket add pinta365 https://github.com/Pinta365/scoop-bucket
+# scoop install tryck
+scoops:
+  - name: tryck
+    repository:
+      owner: Pinta365
+      name: scoop-bucket
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    homepage: https://tryck.pinta.land
+    description: A single-binary static site generator for technical documentation.
+    license: MIT
+    skip_upload: auto

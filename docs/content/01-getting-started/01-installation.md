@@ -1,9 +1,29 @@
 ---
 title: Installation
-description: Download a release binary or install tryck with go install.
+description: Install tryck with Homebrew or Scoop, download a release binary, or use go install.
 ---
 
 tryck is one static binary with no runtime dependencies. Every release archive contains the `tryck` executable (or `tryck.exe` on Windows).
+
+## Install with a package manager
+
+:::tabs{group=pm}
+@tab Homebrew (macOS)
+```sh
+brew install pinta365/tap/tryck
+```
+
+Update with `brew upgrade tryck`.
+@tab Scoop (Windows)
+```sh
+scoop bucket add pinta365 https://github.com/Pinta365/scoop-bucket
+scoop install tryck
+```
+
+Update with `scoop update tryck`.
+:::
+
+Both install the release binary and are updated with every release.
 
 ## Download a release binary
 
@@ -20,16 +40,21 @@ sudo mv tryck /usr/local/bin/
 curl -sSL https://github.com/Pinta365/tryck/releases/latest/download/tryck_linux_arm64.tar.gz | tar xz tryck
 sudo mv tryck /usr/local/bin/
 ```
-@tab macOS (arm64)
+@tab macOS (Apple silicon)
 ```sh
 curl -sSL https://github.com/Pinta365/tryck/releases/latest/download/tryck_darwin_arm64.tar.gz | tar xz tryck
+sudo mv tryck /usr/local/bin/
+```
+@tab macOS (Intel)
+```sh
+curl -sSL https://github.com/Pinta365/tryck/releases/latest/download/tryck_darwin_amd64.tar.gz | tar xz tryck
 sudo mv tryck /usr/local/bin/
 ```
 @tab Windows (amd64)
 Download `tryck_windows_amd64.zip`, unpack it and put `tryck.exe` on your `PATH`.
 :::
 
-Releases are published for Linux amd64 and arm64, macOS arm64 and Windows amd64. For another platform, build from source.
+Releases are published for Linux amd64 and arm64, macOS on Apple silicon and Intel, and Windows amd64. For another platform, build from source.
 
 ## Install with Go
 

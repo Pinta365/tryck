@@ -8,3 +8,5 @@ description: Changes on main since the last release.
 
 - **Share image descriptions.** The `social` plugin's `imageAlt` option, and `imageAlt` front matter next to a page's own `image`, describe the share image for screen readers (`og:image:alt`, `twitter:image:alt`).
 - **Images without alt text** get an `image.alt` note with `--verbose`, so you can find images screen readers skip. It is a note, not a warning, since an empty alt text also marks a decorative image.
+- **Homebrew and Scoop.** `brew install pinta365/tap/tryck` on macOS and `scoop install tryck` (after `scoop bucket add pinta365 https://github.com/Pinta365/scoop-bucket`) on Windows. Both are updated with every release.
+- **Intel Macs.** Releases include `tryck_darwin_amd64.tar.gz` again.

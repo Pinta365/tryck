@@ -24,7 +24,7 @@ tryck dev            # http://127.0.0.1:8080/
 tryck build          # writes dist/
 ```
 
-Download a binary for Linux, macOS or Windows from the [releases page](https://github.com/Pinta365/tryck/releases), or build from source with Go 1.26 or later:
+Install with Homebrew on macOS (`brew install pinta365/tap/tryck`) or Scoop on Windows (`scoop bucket add pinta365 https://github.com/Pinta365/scoop-bucket`, then `scoop install tryck`), download a binary for Linux, macOS or Windows from the [releases page](https://github.com/Pinta365/tryck/releases), or build from source with Go 1.26 or later:
 
 ```sh
 go install github.com/Pinta365/tryck/cmd/tryck@latest
