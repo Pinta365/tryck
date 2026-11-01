@@ -14,6 +14,10 @@ tryck builds static documentation sites from Markdown. It is one Go binary with 
 - **Fast**: parallel parsing and rendering; about 80 ms for 1,000 pages on a laptop.
 - **Themes**: configure the built-in theme or ship your own layouts, static files and defaults in a theme folder.
 - **Extensible without a build step**: add your own `:::` directives with a template, or plugins in JavaScript. Go plugins for everything else.
+- **Math, diagrams and images**: TeX formulas rendered to MathML at build time, mermaid diagrams, and images that get their size, lazy loading and smaller copies for a `srcset`.
+- **Sharing and AI tools**: Open Graph and Twitter card tags, Atom/RSS feeds, and an `llms.txt` with Markdown copies of every page.
+- **Versioned docs**: older releases under `/v1/`, `/v2/` next to the current docs, with a version picker.
+- **Reader extras**: copy buttons, heading anchors, "Edit this page" links and "Last updated" dates.
 - **Live reload**: `tryck dev` rebuilds in memory, reloads the browser and shows build errors as an overlay.
 
 ## Quick start

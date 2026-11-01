@@ -74,7 +74,7 @@ Every layout is executed with these fields:
 | Field | Type | Meaning |
 | :- | :- | :- |
 | `.Site` | SiteInfo | `Title`, `Description`, `BaseURL` (ends in `/`), `Language`, `Dev`. |
-| `.Page` | PageInfo | The current page: `Title`, `NavTitle`, `Description`, `URL`, `Date`, `LastUpdated`, `Draft`, `Weight`, `TitleInBody`, `Aliases`, `Params`, `Data`, `SourcePath`. |
+| `.Page` | PageInfo | The current page: `Title`, `NavTitle`, `Description`, `URL`, `Version`, `Date`, `LastUpdated`, `Draft`, `Weight`, `TitleInBody`, `Aliases`, `Params`, `Data`, `SourcePath`. |
 | `.Content` | HTML | The rendered Markdown body. |
 | `.Nav` | NavNode | The navigation tree, with `Active` and `InPath` set for this page. Children are in `.Children`. |
 | `.TOC` | list of TOCEntry | The table of contents (`.Level`, `.ID`, `.Text`, `.Children`), or empty. |

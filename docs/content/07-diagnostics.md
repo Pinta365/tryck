@@ -51,9 +51,12 @@ Diagnostics go to standard error, sorted by file, line and column.
 | `plugin.error` | error | A plugin returned an error from a phase or a script threw (the message gives the position in the script), or a finalizer tried to add an invalid or already-produced file. | Fix the plugin's configuration or input. |
 | `link.broken` | error | An internal link points at a page, asset or file that does not exist. It is a warning during `tryck dev`, or when `plugins.linkCheck.failOnBroken` is `false`. | Fix the link; the message suggests the closest URL when one is near. |
 | `link.anchor` | warning | A `#fragment` in a link is not an ID on the target page. | Fix the fragment or add a heading with that ID. |
+| `math.error` | warning | A TeX formula could not be parsed; it is shown as its source. | Fix the formula at the reported line. See [Math](02-writing/05-code-and-diagrams.md#math). |
 | `redirect.alias` | error | An alias does not start with `/`, or its redirect file could not be written. | Make every alias a root-absolute path. |
 | `feed.baseUrl` | warning | Feeds need absolute URLs, but `site.baseUrl` has no host. | Set an `http(s)` `baseUrl`, or disable `plugins.feed`. |
 | `feed.section` | warning | A section in `plugins.feed.sections` has no pages with a date. | Fix the section path, or add a `date` to its pages. |
+| `social.baseUrl` | info | Share tags need absolute URLs, but `site.baseUrl` has no host, so none are written. Shown with `--verbose`. | Build with `--base-url` set to the site's address, as the deploy workflows do. |
+| `social.image` | warning | A share image path in front matter is neither a site path nor an `http(s)` URL, or a site path that is not a file on the site. | Fix the path, or add the image to `static/`. |
 | `sitemap.baseUrl` | warning | The sitemap needs absolute URLs, but `site.baseUrl` has no host. | Set an `http(s)` `baseUrl`, or disable `plugins.sitemap`. |
 | `directive.unclosed` | error | A `:::` block is never closed. | Close it with a line of at least as many colons as the opening fence. |
 | `directive.unknown` | warning | A `:::` name has no built-in or plugin renderer; it is rendered as a plain `<div>`. | Register a `DirectiveRenderer`, or fix the name. |

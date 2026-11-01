@@ -5,7 +5,7 @@ description: Install tryck and build this site.
 
 ## Download
 
-tryck is one static binary with no runtime dependencies. Download it for your platform from the [releases page](https://github.com/Pinta365/tryck/releases).
+tryck is one static binary with no runtime dependencies. Install it with a package manager, or download it for your platform from the [releases page](https://github.com/Pinta365/tryck/releases).
 
 :::tabs{group=os}
 @tab Linux
@@ -14,10 +14,13 @@ curl -sSL https://github.com/Pinta365/tryck/releases/latest/download/tryck_linux
 ```
 @tab macOS
 ```sh
-curl -sSL https://github.com/Pinta365/tryck/releases/latest/download/tryck_darwin_arm64.tar.gz | tar xz tryck
+brew install pinta365/tap/tryck
 ```
 @tab Windows
-Download `tryck_windows_amd64.zip` and put `tryck.exe` on your `PATH`.
+```sh
+scoop bucket add pinta365 https://github.com/Pinta365/scoop-bucket
+scoop install tryck
+```
 :::
 
 ## Build
